@@ -324,6 +324,21 @@ Check(rbAnalysis.NotSupportedCount == 1, "回滚:未知功能标记不可恢复"
 Check(rbAnalysis.Restorable.All(i => !string.IsNullOrWhiteSpace(i.RestoreCommand)),
     "回滚:可恢复项均带恢复命令", "");
 
+// ---------- 清理扫描断言(第二代 §9) ----------
+var cleanupScanner = new CleanupScanner(new IExecutionProvider[] { psProvider, cmdProvider });
+var cleanupItems = catalog.ByModule(ModuleKind.Cleanup).ToArray();
+Check(cleanupItems.Length == 9, "清理:功能项数量=9", cleanupItems.Length.ToString());
+var scanCount = cleanupItems.Count(f => f.Command?.Contains("Get-ChildItem -Path") == true);
+Check(scanCount >= 5, "清理:多数项可提取扫描路径", $"{scanCount}/{cleanupItems.Length}");
+var tempItem = cleanupItems.FirstOrDefault(f => f.Id == "cleanup.user-temp");
+if (tempItem is not null)
+{
+    var scanResult = await cleanupScanner.ScanAsync(tempItem);
+    Check(scanResult is not null && scanResult.Ok, "清理:用户临时目录扫描成功", scanResult?.Note ?? scanResult?.SizeText ?? "null");
+    Check(scanResult!.ItemCount > 0, "清理:扫描到文件数>0", scanResult.ItemCount.ToString());
+    Check(scanResult.SizeBytes > 0, "清理:扫描到大小>0", scanResult.SizeText);
+}
+
 // 目录中可恢复功能占比(注册表/服务类应绝大多数可推导)
 var restorable = catalog.All.Count(f => RestoreCommandBuilder.Build(f) is not null);
 Console.WriteLine($"可恢复功能: {restorable} / {catalog.All.Count}");

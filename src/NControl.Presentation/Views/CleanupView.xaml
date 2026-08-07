@@ -5,7 +5,45 @@
              xmlns:ctrl="clr-namespace:NControl.Presentation.Controls">
     <StackPanel>
         <TextBlock FontSize="20" FontWeight="SemiBold" Text="清理维护" />
-        <TextBlock Text="按来源分组选择清理项目;第一代不显示虚构的空间数字,执行结果会写入任务记录。" Style="{StaticResource MutedText}" Margin="0,4,0,14" />
+        <TextBlock Text="先扫描了解可清理空间,再勾选项目执行;扫描数据来自真实统计,执行结果写入任务记录。" Style="{StaticResource MutedText}" Margin="0,4,0,14" TextWrapping="Wrap" />
+
+        <!-- 扫描区块(第二代 §9) -->
+        <Border Style="{StaticResource Card}" Margin="0,0,0,14" Padding="20,16">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="扫描可清理内容" />
+                        <TextBlock Text="{Binding ScanProgressText}" Style="{StaticResource SubtleText}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="开始扫描" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center"
+                            Command="{Binding ScanCommand}" IsEnabled="{Binding IsScanning, Converter={x:Static conv:InverseBoolConverter.Instance}}" />
+                </Grid>
+                <TextBlock Text="{Binding ScanSummaryText}" Foreground="{StaticResource PrimaryBrush}" FontSize="12.5" FontWeight="SemiBold"
+                           Margin="0,8,0,0" TextWrapping="Wrap"
+                           Visibility="{Binding ScanSummaryText, Converter={x:Static conv:StringNotEmptyToVisibilityConverter.Instance}}" />
+                <ItemsControl ItemsSource="{Binding ScanRows}" Margin="0,8,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="1" Text="{Binding CountText}" Style="{StaticResource SubtleText}" />
+                                <TextBlock Grid.Column="2" Text="{Binding SizeText}" FontSize="12.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource PrimaryBrush}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
 
         <!-- 说明卡 -->
         <ItemsControl ItemsSource="{Binding SummaryCards}">

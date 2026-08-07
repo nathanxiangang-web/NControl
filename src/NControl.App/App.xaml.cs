@@ -77,6 +77,7 @@ builder.Services.AddSingleton<IEnvironmentProbe, WindowsEnvironmentProbe>();
 builder.Services.AddSingleton<CompatibilityEngine>();
 builder.Services.AddSingleton<IPlanService, PlanService>();
 builder.Services.AddSingleton<RollbackService>();
+builder.Services.AddSingleton<ICleanupScanner, CleanupScanner>();
 
         // 业务模块
         builder.Services.AddSingleton<IModuleRegistrar, OptimizationModuleRegistrar>();

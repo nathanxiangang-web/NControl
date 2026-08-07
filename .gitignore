@@ -25,3 +25,10 @@ openclaw-workspace-state.json
 *.log
 tools/*.txt
 tools/*.log
+
+/src/���ذ�ȫ����/
+/src/���Ȩ��.bat
+
+# 用户提供的参考素材(SuperUser 提权工具原始目录 + 关闭UAC脚本),不提交
+/src/开关安全中心/
+/src/最高权限.bat

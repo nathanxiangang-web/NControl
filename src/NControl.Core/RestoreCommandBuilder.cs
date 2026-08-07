@@ -65,7 +65,9 @@ public static class RestoreCommandBuilder
             // 已知默认 Automatic 的服务:恢复为 Automatic(否则远程注册表等重启后不自动启动)
             var autoDefaults = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "RemoteRegistry", "DPS", "TrkWks", "SysMain", "WSearch", "DiagTrack", "PcaSvc", "HomeGroupProvider"
+                "RemoteRegistry", "DPS", "TrkWks", "SysMain", "WSearch", "DiagTrack", "PcaSvc", "HomeGroupProvider",
+                // 安全中心:默认自动启动;禁用安全中心后恢复必须还原为 Automatic,否则重启后服务仍不启
+                "wscsvc"
             };
             parts.Add(string.Join("; ", serviceNames.Select(n =>
                 $"Set-Service {n} -StartupType {(autoDefaults.Contains(n) ? "Automatic" : "Manual")} -ErrorAction SilentlyContinue; " +

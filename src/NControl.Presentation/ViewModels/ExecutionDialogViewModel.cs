@@ -107,6 +107,11 @@ public partial class ExecutionDialogViewModel : ObservableObject
             SummaryText = $"成功 {record.SuccessCount} 项 · 失败 {record.FailedCount} 项 · 取消 {record.CancelledCount} 项";
             if (record.RequiresRestart)
                 SummaryText += "\n⚠ 部分项目需要重启资源管理器或系统才能完全生效。";
+            // 安全规范:执行了关闭安全防护类功能后,提醒用户安装替代安全软件(如火绒)
+            var securityDisables = _pendingItems.Where(i => IsSecurityDisableItem(i)).Select(i => i.Name).Distinct().ToArray();
+            if (securityDisables.Length > 0)
+                SummaryText += "\n\n⚠ 已关闭: " + string.Join("、", securityDisables) +
+                    "\n系统将不再主动提醒安全状态。建议安装火绒安全等第三方防护软件,并在安装完成后开启实时防护。";
             CurrentPhase = DialogPhase.Done;
             TaskCompleted?.Invoke(record);
         }
@@ -148,6 +153,18 @@ public partial class ExecutionDialogViewModel : ObservableObject
 
         ProgressPercent = p.Total == 0 ? 0 : Math.Min(100, (p.Index + 1.0) / p.Total * 100);
         ProgressText = $"当前进度 {p.Index + 1} / {p.Total}";
+    }
+
+    /// <summary>识别“关闭安全防护”类功能:执行成功后提醒用户安装替代安全软件(安全规范)。</summary>
+    private static bool IsSecurityDisableItem(FunctionItem item)
+    {
+        var id = item.Id;
+        if (id.StartsWith("advanced.disable-", StringComparison.OrdinalIgnoreCase)) return true;
+        if (id.Contains("firewall", StringComparison.OrdinalIgnoreCase)
+            || id.Contains("security-center", StringComparison.OrdinalIgnoreCase)
+            || id.Contains("smartscreen", StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
     }
 }
 

@@ -32,4 +32,9 @@
     <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- 安全中心开关工具(SuperUser 提权器 + DEFENDER.CMD + 计划任务模板):随程序分发 -->
+  <ItemGroup>
+    <None Include="Tools\SecurityCenter\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

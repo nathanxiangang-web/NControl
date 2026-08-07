@@ -62,6 +62,19 @@ public static class OptimizationFeaturesSecurity
         catalog.Register(F("advanced.disable-vbs", "关闭虚拟化安全性", "安全设置",
             "按需开启：性能可能提高，隔离防护下降", RiskLevel.HighRisk, true, RestartRequirement.Reboot,
             "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard' -Name 'EnableVirtualizationBasedSecurity' -Value 0 -Type DWord -Force"));
+
+        // ===== 新增:安全中心/Defender 开关(参考用户提供的“开关安全中心”工具 + ZyperWin++ Defender.cs)=====
+        // 调用随程序分发的 SuperUser 提权工具执行 DEFENDER.CMD,完整处理服务/进程/实时防护/计划任务/SmartScreen。
+        // 前置检测:Defender 篡改保护(TamperProtection)开启时拦截一切服务键写入,需先引导用户手动关闭。
+        // 禁用后建议安装火绒安全等第三方防护软件(执行完成汇总会提醒)。
+        catalog.Register(F("advanced.disable-security-center", "禁用安全中心", "安全设置",
+            "按需开启：以 TrustedInstaller 权限完整关闭 Microsoft Defender 与安全中心(服务/进程/实时防护/计划任务/SmartScreen)。\n\n⚠ 前置条件：需先在 Windows 安全中心→病毒和威胁防护→管理设置 中关闭“篡改保护”，否则会被 Defender 自我保护拦截。\n⚠ 安全提示：关闭后系统将失去 Defender 防护，建议安装火绒安全等第三方防护软件并开启实时防护。",
+            RiskLevel.HighRisk, true, RestartRequirement.Reboot,
+            "$tp = (Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows Defender\\Features' -ErrorAction SilentlyContinue).TamperProtection; if ($tp -eq 4) { Write-Error 'Defender 篡改保护(Tamper Protection)正在运行,拦截对安全中心的修改。请先到 Windows 安全中心 → 病毒和威胁防护 → 管理设置,关闭“篡改保护”后重试。'; exit 1 }; $d = [AppContext]::BaseDirectory; & \"$d\\Tools\\SecurityCenter\\SuperUser64.exe\" /w /c \"$d\\Tools\\SecurityCenter\\DEFENDER.CMD\" \"Disable\"; if ($LASTEXITCODE -ne 0) { Write-Error \"SuperUser 执行失败,退出码 $LASTEXITCODE\" }"));
+        catalog.Register(F("advanced.enable-security-center", "启用安全中心", "安全设置",
+            "按需开启：以 TrustedInstaller 权限恢复 Microsoft Defender 与安全中心至初始状态(服务/实时防护/计划任务/SmartScreen)\n\n⚠ 前置条件：需先在 Windows 安全中心关闭“篡改保护”，否则会被 Defender 自我保护拦截。",
+            RiskLevel.HighRisk, true, RestartRequirement.Reboot,
+            "$tp = (Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows Defender\\Features' -ErrorAction SilentlyContinue).TamperProtection; if ($tp -eq 4) { Write-Error 'Defender 篡改保护(Tamper Protection)正在运行,拦截对安全中心的修改。请先到 Windows 安全中心 → 病毒和威胁防护 → 管理设置,关闭“篡改保护”后重试。'; exit 1 }; $d = [AppContext]::BaseDirectory; & \"$d\\Tools\\SecurityCenter\\SuperUser64.exe\" /w /c \"$d\\Tools\\SecurityCenter\\DEFENDER.CMD\" \"Enable\"; if ($LASTEXITCODE -ne 0) { Write-Error \"SuperUser 执行失败,退出码 $LASTEXITCODE\" }"));
     }
 
     private static FunctionItem F(

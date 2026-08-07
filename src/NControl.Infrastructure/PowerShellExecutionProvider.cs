@@ -102,12 +102,15 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
                 ? script[(script.IndexOf(';') + 1)..].TrimStart()
                 : script;
 
-            // 生成脚本内容:编码 + PATH + 标题 + 整段命令原样执行 + 退出码 + 结尾 pause
+            // 生成脚本内容:编码 + PATH + 管理员检测 + 标题 + 整段命令原样执行 + 退出码 + 结尾 pause
             var sb = new StringBuilder();
             sb.AppendLine("[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;");
             sb.AppendLine("$ErrorActionPreference='Continue';");
             // 确保 System32 在 PATH(DISM/sfc 等系统工具可被找到,子进程环境可能缺)
             sb.AppendLine("$env:PATH = \"$env:SystemRoot\\System32;$env:SystemRoot;\" + $env:PATH;");
+            // 管理员检测:DISM/SFC 需要提升权限,非管理员时明确提示并等待关闭
+            sb.AppendLine("$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator);");
+            sb.AppendLine("if (-not $isAdmin) { Write-Host '!! 当前窗口不是管理员权限,DISM/SFC 将无法执行。请关闭本窗口,以管理员身份运行 NControl 后重试。' -ForegroundColor Red; Write-Host ''; $null = Read-Host; exit 1 };");
             sb.AppendLine($"Write-Host '====== {item.Name} ======' -ForegroundColor Cyan;");
             sb.AppendLine("Write-Host '依次执行中,请勿关闭本窗口…' -ForegroundColor Yellow;");
             sb.AppendLine();
@@ -123,11 +126,13 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
             File.WriteAllText(scriptFile, sb.ToString(), new UTF8Encoding(true));
 
             // 启动 PowerShell 控制台窗口:直接 powershell.exe -NoExit -File 脚本(窗口内依次执行命令)
+            // Verb=runas 强制以管理员身份启动(DISM/SFC 需要提升;本机 UAC 自动批准无弹窗)
             var psi = new ProcessStartInfo
             {
                 FileName = PowerShellPath,
                 UseShellExecute = true,
-                CreateNoWindow = false
+                CreateNoWindow = false,
+                Verb = "runas"
             };
             psi.ArgumentList.Add("-NoExit");
             psi.ArgumentList.Add("-ExecutionPolicy");

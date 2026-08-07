@@ -260,6 +260,51 @@ Check(env.BuildNumber > 0 && !string.IsNullOrEmpty(env.Architecture) && !string.
 compatEngine.ClearCache();
 Check(true, "兼容性:引擎缓存清除正常", "");
 
+// ---------- 配置系统断言(第二代 §5-§6) ----------
+var planDir = Path.Combine(Path.GetTempPath(), "nctl_plan_test_" + Guid.NewGuid().ToString("N"));
+var planPaths = new NControl.Infrastructure.AppPaths(new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+{
+    ["NControl:DataFolder"] = planDir
+}).Build());
+var planService = new NControl.Infrastructure.PlanService(planPaths);
+var plan = new PlanConfig { Name = "测试方案", Description = "冒烟测试", Functions = new List<string> { "explorer.open-this-pc", "privacy.disable-page-prediction", "explorer.open-this-pc", "unknown.feature-xyz" } };
+planService.Save(plan);
+Check(planService.GetAll().Count == 1, "配置:保存后读取到 1 个方案", planService.GetAll().Count.ToString());
+
+// 导出
+var exportPath = Path.Combine(Path.GetTempPath(), "nctl_plan_test_export.json");
+planService.Export(plan, exportPath);
+Check(File.Exists(exportPath), "配置:导出 JSON 文件成功", exportPath);
+
+// 导入:正常流程
+var importResult = planService.Import(exportPath, catalog, compatEngine);
+Check(importResult.ParseOk, "配置:导入解析成功", importResult.ParseError ?? "");
+Check(importResult.DuplicateCount == 1, "配置:重复 FunctionId 自动去重", importResult.DuplicateCount.ToString());
+Check(importResult.UnknownIds.Count == 1 && importResult.UnknownIds[0] == "unknown.feature-xyz",
+    "配置:未知 FunctionId 标记", string.Join(",", importResult.UnknownIds));
+Check(importResult.Ready.Count == 2, "配置:可执行项 2 个(兼容项)", importResult.Ready.Count.ToString());
+Check(importResult.HighRisk.Count == 0 && importResult.Unsupported.Count == 0,
+    "配置:无高风险/无不兼容项", $"{importResult.HighRisk.Count}/{importResult.Unsupported.Count}");
+
+// 非法 JSON
+var badPath = Path.Combine(Path.GetTempPath(), "nctl_plan_test_bad.json");
+File.WriteAllText(badPath, "{ 这不是合法JSON");
+var badResult = planService.Import(badPath, catalog, compatEngine);
+Check(!badResult.ParseOk, "配置:非法 JSON 拒绝导入", badResult.ParseError ?? "");
+
+// 高风险项不默认选择
+var highRiskPlan = new PlanConfig { Name = "高风险方案", Functions = new List<string> { "security.*" } };
+var hrExport = Path.Combine(Path.GetTempPath(), "nctl_plan_test_hr.json");
+planService.Export(highRiskPlan, hrExport);
+var hrResult = planService.Import(hrExport, catalog, compatEngine);
+Check(hrResult.UnknownIds.Count == 1, "配置:不存在的高风险 ID 标记未知", string.Join(",", hrResult.UnknownIds));
+
+// 清理
+planService.Delete("测试方案");
+Check(planService.GetAll().Count == 0, "配置:删除方案成功", "");
+File.Delete(exportPath); File.Delete(badPath); File.Delete(hrExport);
+Directory.Delete(planDir, true);
+
 // 目录中可恢复功能占比(注册表/服务类应绝大多数可推导)
 var restorable = catalog.All.Count(f => RestoreCommandBuilder.Build(f) is not null);
 Console.WriteLine($"可恢复功能: {restorable} / {catalog.All.Count}");

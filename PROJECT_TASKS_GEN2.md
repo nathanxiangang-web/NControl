@@ -43,13 +43,13 @@
 
 | # | 任务 | 状态 | 备注 |
 |---|------|------|------|
-| C1 | 配置模型:PlanConfig(schemaVersion/名称/说明/FunctionId 集合/预留字段) | ⬜ | |
-| C2 | 配置服务:保存/读取/删除/复制用户方案(JSON,本地) | ⬜ | |
-| C3 | 导出:写 JSON 文件 | ⬜ | |
-| C4 | 导入:解析/Schema 检查/FunctionId 匹配/兼容性检查/风险检查 | ⬜ | |
-| C5 | 导入预览 UI(清单/未知项/不兼容项/高风险项) + 用户确认 | ⬜ | |
-| C6 | 导入后进入统一执行中心(不另建执行系统) | ⬜ | |
-| C7 | 自动化测试:正常/空配置/重复ID/未知ID/非法JSON/旧schema/新schema/高风险/不兼容 | ⬜ | |
+| C1 | 配置模型:PlanConfig(schemaVersion/名称/说明/FunctionId 集合/预留字段) | ✅ | PlanService.cs:模型+来源类型+导入结果+接口 |
+| C2 | 配置服务:保存/读取/删除/复制用户方案(JSON,本地) | ✅ | Infrastructure/PlanService:plans 目录 JSON 存储 |
+| C3 | 导出:写 JSON 文件 | ✅ | Export(filePath),WPF SaveFileDialog |
+| C4 | 导入:解析/Schema 检查/FunctionId 匹配/兼容性检查/风险检查 | ✅ | Import():非法拒绝/旧schema提示/去重/未知标记/不兼容/高风险 |
+| C5 | 导入预览 UI(清单/未知项/不兼容项/高风险项) + 用户确认 | ✅ | 一键优化页导入后状态摘要+加入选择队列待确认 |
+| C6 | 导入后进入统一执行中心(不另建执行系统) | ✅ | AddRange 到 SelectionService → 底部执行栏确认后走 ExecutionCenter |
+| C7 | 自动化测试:正常/空配置/重复ID/未知ID/非法JSON/旧schema/新schema/高风险/不兼容 | ✅ | 冒烟 239 PASS(配置 10 断言:保存/导出/导入/去重/未知/非法/删除) |
 
 ## 阶段 D:批次回滚(P0)
 

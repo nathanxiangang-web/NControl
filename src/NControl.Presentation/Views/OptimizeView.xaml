@@ -7,6 +7,62 @@
         <TextBlock FontSize="20" FontWeight="SemiBold" Text="一键优化" />
         <TextBlock Text="选择一个适合当前电脑的方案,也可以展开查看具体项目。" Style="{StaticResource MutedText}" Margin="0,4,0,14" />
 
+        <!-- 我的方案(第二代 §5):保存/导出/导入 -->
+        <Border Style="{StaticResource Card}" Margin="0,0,0,12" Padding="20,16">
+            <StackPanel>
+                <TextBlock FontSize="14" FontWeight="SemiBold" Text="我的方案" />
+                <TextBlock Text="把当前已选择的功能保存为配置,用于新电脑重复部署或分享。配置只引用功能项,不包含任何脚本。"
+                           Style="{StaticResource MutedText}" Margin="0,4,0,10" TextWrapping="Wrap" />
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Text="{Binding PlanNameInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalContentAlignment="Center" Padding="10,6" FontSize="13"
+                             BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                             ToolTip="方案名称" />
+                    <Button Grid.Column="1" Content="保存为我的方案" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"
+                            Command="{Binding SavePlanCommand}" />
+                    <Button Grid.Column="2" Content="导出方案" Style="{StaticResource GhostButton}" Margin="8,0,0,0"
+                            Command="{Binding ExportPlanCommand}" />
+                    <Button Grid.Column="3" Content="从配置导入" Style="{StaticResource GhostButton}" Margin="8,0,0,0"
+                            Command="{Binding ImportPlanCommand}" />
+                </Grid>
+                <TextBlock Text="{Binding PlanStatusText}" Style="{StaticResource SubtleText}" TextWrapping="Wrap"
+                           Margin="0,4,0,0"
+                           Visibility="{Binding PlanStatusText, Converter={x:Static conv:StringNotEmptyToVisibilityConverter.Instance}}" />
+                <ItemsControl ItemsSource="{Binding MyPlans}" Margin="0,6,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding CountText}" Style="{StaticResource SubtleText}" />
+                                    <TextBlock Text="{Binding CompatText}" Foreground="{StaticResource WarningBrush}" FontSize="11"
+                                               Visibility="{Binding CompatText, Converter={x:Static conv:StringNotEmptyToVisibilityConverter.Instance}}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Content="加载" Style="{StaticResource GhostButton}" Height="26" Padding="10,0"
+                                            Command="{Binding DataContext.LoadPlanCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Content="删除" Style="{StaticResource GhostButton}" Height="26" Padding="10,0" Margin="6,0,0,0"
+                                            Command="{Binding DataContext.DeletePlanCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
         <!-- 方案卡片 -->
         <ItemsControl ItemsSource="{Binding Presets}">
             <ItemsControl.ItemTemplate>

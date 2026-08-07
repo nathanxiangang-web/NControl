@@ -40,6 +40,16 @@
 | X3 | 预设同步清理扩展引用(轻/推荐/深度) | ✅ | 预设引用全部解析成功,无断链 |
 | X4 | 验证:构建 0 警告 + FeatureStats 154 项/分类正确 + 冒烟 132 PASS + 全量真机 140 PASS/0 FAIL | ✅ | 提交 |
 
+## 第十二轮:推荐预设按 ini 对齐 + 桌面/远程问题修复(2026-08-07 08:45 下达)
+
+| # | 任务 | 状态 | 备注 |
+|---|------|------|------|
+| P1 | 解析 ZyperWin 推荐配置 ini(2026-08-06):127 项勾选全部匹配 App 功能 | ✅ | 名称精确匹配(含“暂停/停止”容错) |
+| P2 | 12 项高风险剔除(防火墙/UAC/SmartScreen/系统还原/从不更新/停更5000天/TSX/Exploit Protection/打开程序警告/不安全下载警告/管理审批模式/安全UIAccess) | ✅ | 产品约束:高风险不进预设 |
+| P3 | preset.recommended 按 ini 勾选重组为 115 项,Risk 调为 Caution | ✅ | FeatureStats 引用全部解析;冒烟 218 PASS |
+| P4 | 修复桌面转圈:恢复被测试残留删除的 DelegateFolders\{F5FB2C77...} 键 + 重启 explorer | ✅ | 负载 0-6%,explorer 响应正常 |
+| P5 | 远程复制链路确认:RemoteRegistry/LanmanServer Running、445 可达、rdpclip 正常 | ✅ | 提交 f1b1de0 |
+
 ## 第七轮:快照下真机执行验证(2026-08-07 20:38 下达)
 
 | # | 任务 | 状态 | 备注 |

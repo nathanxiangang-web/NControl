@@ -1,3 +1,4 @@
+# ---------- 构建产物 ----------
 bin/
 obj/
 *.user
@@ -5,3 +6,22 @@ obj/
 *.db
 *.db-shm
 *.db-wal
+
+# ---------- 第三方参考源码(不进入仓库) ----------
+src/ZyperWin-next/
+src/ZyperWin++当前功能统计表.xlsx
+
+# ---------- 个人工作区文件(OpenClaw 环境,不进入仓库) ----------
+AGENTS.md
+SOUL.md
+IDENTITY.md
+TOOLS.md
+USER.md
+HEARTBEAT.md
+memory/
+openclaw-workspace-state.json
+
+# ---------- 运行时数据 ----------
+*.log
+tools/*.txt
+tools/*.log

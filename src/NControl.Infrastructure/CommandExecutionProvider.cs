@@ -25,7 +25,7 @@ public sealed class CommandExecutionProvider : IExecutionProvider
 
         var psi = new ProcessStartInfo
         {
-            FileName = "cmd.exe",
+            FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe"),
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,

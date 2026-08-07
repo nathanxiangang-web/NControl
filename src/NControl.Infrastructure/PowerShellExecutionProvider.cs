@@ -15,7 +15,25 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
     private static readonly System.Text.RegularExpressions.Regex RegWriteKeyPattern = new(
         @"Set-ItemProperty\s+-Path\s+'([^']+)'",
         System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>删除键命令:Remove-Item -Path '...' [参数...]</summary>
+    private static readonly System.Text.RegularExpressions.Regex RegRemoveKeyPattern = new(
+        @"Remove-Item\s+-Path\s+'([^']+)'([^;]*)",
+        System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>删除值命令:Remove-ItemProperty -Path '...' -Name '...' [参数...]</summary>
+    private static readonly System.Text.RegularExpressions.Regex RegRemoveValuePattern = new(
+        @"Remove-ItemProperty\s+-Path\s+'([^']+)'\s+-Name\s+'([^']+)'([^;]*)",
+        System.Text.RegularExpressions.RegexOptions.Compiled);
     private readonly ILogger<PowerShellExecutionProvider> _logger;
+
+    /// <summary>
+    /// powershell.exe 绝对路径。管理员进程(提权后)的 PATH 可能不含
+    /// System32\WindowsPowerShell\v1.0,相对名启动会报"系统找不到指定的文件"。
+    /// </summary>
+    private static readonly string PowerShellPath =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "WindowsPowerShell", "v1.0", "powershell.exe");
 
     public PowerShellExecutionProvider(ILogger<PowerShellExecutionProvider> logger) => _logger = logger;
 
@@ -30,10 +48,22 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
         // 中文系统下 powershell.exe 重定向输出默认 GBK(代码页 936);强制 UTF-8,避免中文乱码
         script = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; " + script;
 
-        // 自动创建目标键:新系统上 HKCU/HKLM 子键可能不存在,Set-ItemProperty 不会自动建键
-        // (New-Item -Force 幂等,键已存在时无副作用)
+        // 自动创建目标键:新系统上 HKCU/HKLM 子键可能不存在,Set-ItemProperty 不会自动建键。
+        // 注意:不能对已存在的键用 New-Item -Force(会尝试删除重建,报"该子项不存在,无法删除子项目录树"),
+        // 因此改为 if (-not (Test-Path)) 才创建,幂等且不破坏已有键。
         script = RegWriteKeyPattern.Replace(script,
-            m => $"New-Item -Path '{m.Groups[1].Value}' -Force | Out-Null; Set-ItemProperty -Path '{m.Groups[1].Value}'");
+            m => $"if (-not (Test-Path '{m.Groups[1].Value}')) {{ New-Item -Path '{m.Groups[1].Value}' -Force | Out-Null }}; Set-ItemProperty -Path '{m.Groups[1].Value}'");
+
+        // 删除类命令同样保护:Remove-ItemProperty/Remove-Item 对不存在的键会报错并使进程退出码=1,
+        // 导致 provider 误判失败(影响恢复命令:目标本来不存在时也应视为成功)。
+        // 只在目标键存在时执行删除,幂等且不产生错误。
+        // 删除类命令同样保护:Remove-ItemProperty/Remove-Item 对不存在的目标会报错并使进程退出码=1,
+        // 导致 provider 误判失败(影响恢复命令:目标本来不存在时也应视为成功)。
+        // 键存在才删键;值存在才删值。幂等且不产生错误。
+        script = RegRemoveKeyPattern.Replace(script,
+            m => $"if (Test-Path '{m.Groups[1].Value}') {{ Remove-Item -Path '{m.Groups[1].Value}'{m.Groups[2].Value} }}");
+        script = RegRemoveValuePattern.Replace(script,
+            m => $"if (Get-ItemProperty -Path '{m.Groups[1].Value}' -Name '{m.Groups[2].Value}' -ErrorAction SilentlyContinue) {{ Remove-ItemProperty -Path '{m.Groups[1].Value}' -Name '{m.Groups[2].Value}'{m.Groups[3].Value} }}");
 
         var needAdmin = item.RequiresAdmin && !ElevationHelper.IsElevated();
 
@@ -48,7 +78,7 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
     {
         var psi = new ProcessStartInfo
         {
-            FileName = "powershell.exe",
+            FileName = PowerShellPath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -125,14 +155,14 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
             var wrapper = $"& {{ & '{ps1}' *> '{outFile}'; exit $LASTEXITCODE }}";
             var psi = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = PowerShellPath,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
             psi.ArgumentList.Add("-NoProfile");
             psi.ArgumentList.Add("-NonInteractive");
             psi.ArgumentList.Add("-Command");
-            psi.ArgumentList.Add($"Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait -PassThru -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-Command', '{EscapeSingle(wrapper)}') | ForEach-Object {{ exit $_.ExitCode }}");
+            psi.ArgumentList.Add($"Start-Process -FilePath '{PowerShellPath}' -Verb RunAs -Wait -PassThru -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-Command', '{EscapeSingle(wrapper)}') | ForEach-Object {{ exit $_.ExitCode }}");
 
             using var process = new Process { StartInfo = psi };
             if (!process.Start())

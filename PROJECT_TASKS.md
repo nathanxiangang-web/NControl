@@ -18,6 +18,19 @@
 | A7 | 构建(0 警告 0 错误)+ 对齐校验(154/154 全命中,分类 0 不一致)+ 冒烟测试全 PASS + 预设引用全部解析 | ✅ | FeatureStats 新增预设引用校验 |
 | A8 | 提交 | ✅ | |
 
+## 第九轮:全量真机功能测试 + provider 修复(2026-08-07 07:20-08:10 下达)
+
+| # | 任务 | 状态 | 备注 |
+|---|------|------|------|
+| T1 | 新建 tools/NControl.FunctionTest 全量真机测试工具(逐项执行→备份→验证→恢复) | ✅ | 管理员模式运行;17 项 HighRisk 仅验证命令+恢复命令生成 |
+| T2 | 修复 provider bug A:powershell.exe/reg.exe 相对路径在提权进程 PATH 中找不到 | ✅ | 改绝对路径(Environment.SystemDirectory + WindowsPowerShell\v1.0);cmd.exe 同步改 |
+| T3 | 修复 provider bug B:New-Item -Force 对已存在且有子键的键报“无法删除子项目录树” | ✅ | 改 if (-not Test-Path) 才建键 |
+| T4 | 修复 provider bug C:Remove-Item/Remove-ItemProperty 对不存在目标报错致退出码1误判失败 | ✅ | 注入 if (Test-Path)/if (Get-ItemProperty) 保护,幂等 |
+| T5 | 修复 powercfg 相对路径(管理员 PATH 无 System32) | ✅ | 功能命令改 & 'C:\WINDOWS\System32\powercfg.exe' |
+| T6 | 家庭组/HPET 服务不存在时静默跳过 | ✅ | if (Get-Service) 包裹 |
+| T7 | 全量测试结果:144 PASS / 1 FAIL(TaskbarDa ACL 保护,环境限制) | ✅ | 自 150 FAIL 逐步修复至 1 环境限制项 |
+| T8 | 冒烟测试 157 PASS 无回归 + 提交 | ✅ | |
+
 ## 第七轮:快照下真机执行验证(2026-08-07 20:38 下达)
 
 | # | 任务 | 状态 | 备注 |

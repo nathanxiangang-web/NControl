@@ -118,10 +118,10 @@ public static class OptimizationFeaturesPerformance
             "按需开启：减少上报，但不利于故障排查", RiskLevel.Caution, true, RestartRequirement.None,
             "Stop-Service WerSvc -Force -ErrorAction SilentlyContinue; Set-Service WerSvc -StartupType Disabled"));
 
-        // 22、禁用家庭组
+        // 22、禁用家庭组(服务不存在时静默跳过,Win11 已移除 HomeGroupProvider)
         catalog.Register(F("perf.disable-homegroup", "禁用家庭组", "性能优化设置",
             "建议开启：旧版家庭组已淘汰，通常无影响", RiskLevel.Recommended, true, RestartRequirement.None,
-            "Stop-Service HomeGroupProvider -Force -ErrorAction SilentlyContinue; Set-Service HomeGroupProvider -StartupType Disabled"));
+            "if (Get-Service HomeGroupProvider -ErrorAction SilentlyContinue) { Stop-Service HomeGroupProvider -Force -ErrorAction SilentlyContinue; Set-Service HomeGroupProvider -StartupType Disabled -ErrorAction SilentlyContinue }"));
 
         // 23、禁用客户体验改善计划
         catalog.Register(F("perf.disable-ceip", "禁用客户体验改善计划", "性能优化设置",
@@ -156,7 +156,7 @@ public static class OptimizationFeaturesPerformance
         // 29、启用高性能电源计划
         catalog.Register(F("performance.high-performance-plan", "启用高性能电源计划", "性能优化设置",
             "按需开启：性能更高，但更耗电发热", RiskLevel.Caution, false, RestartRequirement.None,
-            "powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"));
+            "& 'C:\\WINDOWS\\System32\\powercfg.exe' /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"));
 
         // 30、禁用处理器的幽灵和熔断补丁以提高性能
         catalog.Register(F("advanced.disable-meltdown-mitigations", "禁用处理器的幽灵和熔断补丁以提高性能", "性能优化设置",
@@ -183,10 +183,10 @@ public static class OptimizationFeaturesPerformance
             "建议开启：减少数据上报，基本没有用", RiskLevel.Recommended, true, RestartRequirement.None,
             "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\PCHealth\\ErrorReporting' -Name 'DoReport' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\PCHealth\\ErrorReporting' -Name 'ShowUI' -Value 0 -Type DWord -Force"));
 
-        // 35、禁用高精度事件定时器（HPET）
+        // 35、禁用高精度事件定时器（HPET）(服务不存在时静默跳过)
         catalog.Register(F("perf.disable-hpet", "禁用高精度事件定时器（HPET）", "性能优化设置",
             "不建议开启：收益不稳，可能引发计时异常", RiskLevel.Caution, true, RestartRequirement.None,
-            "Stop-Service hpet -Force -ErrorAction SilentlyContinue; Set-Service hpet -StartupType Disabled -ErrorAction SilentlyContinue"));
+            "if (Get-Service hpet -ErrorAction SilentlyContinue) { Stop-Service hpet -Force -ErrorAction SilentlyContinue; Set-Service hpet -StartupType Disabled -ErrorAction SilentlyContinue }"));
 
         // 36、关闭系统自动调试功能，提高系统运行速度
         catalog.Register(F("perf.disable-auto-debug", "关闭系统自动调试功能，提高系统运行速度", "性能优化设置",
@@ -246,7 +246,7 @@ public static class OptimizationFeaturesPerformance
         // ===== 第一代自研扩展(不在 ZyperWin 文档中,保留)=====
         catalog.Register(F("performance.ultimate-performance-plan", "启用卓越性能电源计划", "性能优化设置",
             "启用并切换到卓越性能计划;效果依赖硬件与系统版本,验证不足(自研扩展)。", RiskLevel.Experimental, true, RestartRequirement.None,
-            "powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null; powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61"));
+            "& 'C:\\WINDOWS\\System32\\powercfg.exe' -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null; & 'C:\\WINDOWS\\System32\\powercfg.exe' /setactive e9a42b02-d5df-448d-aa00-03f14749eb61"));
         catalog.Register(F("performance.disable-transparency", "关闭窗口透明效果", "性能优化设置",
             "关闭任务栏和部分界面的透明效果,界面更直接(自研扩展)。", RiskLevel.Safe, false, RestartRequirement.None,
             "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name 'EnableTransparency' -Value 0 -Type DWord -Force"));

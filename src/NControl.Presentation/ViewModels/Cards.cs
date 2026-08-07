@@ -192,6 +192,24 @@ public partial class SettingRowViewModel : ObservableObject
         IsHighRisk = item.Risk == RiskLevel.HighRisk;
         RestoreCommandText = RestoreCommandBuilder.Build(item);
         CanRestore = !string.IsNullOrWhiteSpace(RestoreCommandText);
+
+        // 状态检测:已优化的项自动处于选中状态,并显示“已优化”标识
+        var detected = StateDetector.Detect(item);
+        if (detected == true)
+        {
+            IsOptimized = true;
+            OptimizedText = "已优化";
+            if (!_selection.IsSelected(item))
+                _selection.Add(item);
+        }
+        else if (detected == false)
+        {
+            IsOptimized = false;
+        }
+        else
+        {
+            OptimizedText = "状态未知";
+        }
     }
 
     public FunctionItem Item { get; }
@@ -202,6 +220,12 @@ public partial class SettingRowViewModel : ObservableObject
     public bool IsHighRisk { get; }
     public string? RestoreCommandText { get; }
     public bool CanRestore { get; }
+
+    /// <summary>当前系统是否已处于优化后状态(状态检测)。</summary>
+    public bool IsOptimized { get; }
+
+    /// <summary>状态标识文本:已优化 / 状态未知(空=未优化)。</summary>
+    public string OptimizedText { get; } = "";
 
     public bool IsSelected
     {

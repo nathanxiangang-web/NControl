@@ -5,7 +5,7 @@
              xmlns:ctrl="clr-namespace:NControl.Presentation.Controls">
     <StackPanel>
         <TextBlock FontSize="20" FontWeight="SemiBold" Text="系统设置" />
-        <TextBlock Text="切换开关表示“选择应用”,不会立即修改系统;底部确认后统一执行。" Style="{StaticResource MutedText}" Margin="0,4,0,14" />
+        <TextBlock Text="开关选中表示“选择应用”;系统已处于优化状态的项会自动选中并显示“已优化”标识,底部确认后统一执行。" Style="{StaticResource MutedText}" Margin="0,4,0,14" TextWrapping="Wrap" />
 
         <!-- 分类标签 -->
         <ItemsControl ItemsSource="{Binding Chips}">
@@ -49,6 +49,25 @@
                                                             Visibility="{Binding IsHighRisk, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}">
                                                         <TextBlock Text="仅高级区域" FontSize="11" FontWeight="Bold"
                                                                    Foreground="{StaticResource NeutralBrush}" />
+                                                    </Border>
+                                                    <Border Style="{StaticResource Pill}" Background="{StaticResource SuccessSoftBrush}" Margin="8,0,0,0"
+                                                            Visibility="{Binding IsOptimized, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}">
+                                                        <TextBlock Text="{Binding OptimizedText}" FontSize="11" FontWeight="Bold"
+                                                                   Foreground="{StaticResource SuccessBrush}" />
+                                                    </Border>
+                                                    <Border Margin="8,0,0,0">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border" BasedOn="{StaticResource Pill}">
+                                                                <Setter Property="Background" Value="{StaticResource NeutralSoftBrush}" />
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding OptimizedText}" Value="状态未知">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock Text="{Binding OptimizedText}" FontSize="11" Foreground="{StaticResource NeutralBrush}" />
                                                     </Border>
                                                 </StackPanel>
                                                 <TextBlock Text="{Binding Description}" Style="{StaticResource MutedText}" Margin="0,6,0,0" />

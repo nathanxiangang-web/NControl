@@ -223,6 +223,19 @@ Check(restoreFw?.Contains("Policies\\Microsoft\\WindowsFirewall") == true,
 Check(restoreFw?.Contains("Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy") != true,
     "恢复生成器:防火墙特例 -> 不删除本地 EnableFirewall(避免配置变未配置)", restoreFw);
 
+// ---------- 状态检测器断言 ----------
+var det1 = StateDetector.Detect(RestoreProbe("t.det-reg", "Set-ItemProperty -Path 'HKCU:\\Software\\Test\\Det' -Name 'X' -Value 1 -Type DWord -Force"));
+Check(det1 == false || det1 == null,
+    "状态检测:不存在的值 -> 未优化或不可检测", det1?.ToString() ?? "null");
+var det2 = StateDetector.Detect(RestoreProbe("t.det-svc", "Set-Service SysMain -StartupType Disabled"));
+// SysMain 本机通常 Automatic => 未优化
+Check(det2 == false || det2 == null,
+    "状态检测:服务未禁用 -> 未优化或不可检测", det2?.ToString() ?? "null");
+var detCoverage = catalog.ByModule(ModuleKind.Optimization)
+    .Count(f => StateDetector.Detect(f) is not null);
+Check(detCoverage >= catalog.ByModule(ModuleKind.Optimization).Count() * 0.8,
+    "状态检测:优化模块可检测覆盖率不低于 80%", $"{detCoverage}/{catalog.ByModule(ModuleKind.Optimization).Count()}");
+
 // 目录中可恢复功能占比(注册表/服务类应绝大多数可推导)
 var restorable = catalog.All.Count(f => RestoreCommandBuilder.Build(f) is not null);
 Console.WriteLine($"可恢复功能: {restorable} / {catalog.All.Count}");

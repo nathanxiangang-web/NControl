@@ -49,8 +49,35 @@ if (args.Contains("--probe"))
     return;
 }
 
-if (args.Contains("--cleanup"))
+if (args.Contains("--detect"))
 {
+    // 状态检测验证
+    var dSw = new StreamWriter(Path.Combine(AppContext.BaseDirectory, "detect_result.txt"), append: false, new UTF8Encoding(true));
+    var dlog = new Action<string>(s => { Console.WriteLine(s); dSw.WriteLine(s); dSw.Flush(); });
+    var dCat = new FunctionCatalog(NullLogger<FunctionCatalog>.Instance);
+    new OptimizationModuleRegistrar().RegisterFeatures(dCat);
+
+    dlog("=== 已优化状态检测(当前系统) ===");
+    foreach (var id in new[] { "taskbar.hide-search", "explorer.remove-duplicate-drives" })
+    {
+        var item = dCat.Find(id);
+        if (item is null) continue;
+        var s = StateDetector.Detect(item);
+        dlog($"{item.Name}: {(s == true ? "已优化✅" : s == false ? "未优化" : "不可检测")}");
+    }
+    dlog("=== 覆盖率统计 ===");
+    var dAll = dCat.ByModule(ModuleKind.Optimization).ToArray();
+    var detectable = dAll.Count(f => StateDetector.Detect(f) is not null);
+    var optimized = dAll.Count(f => StateDetector.Detect(f) == true);
+    dlog($"可检测: {detectable}/{dAll.Length}  当前已优化: {optimized}");
+    dlog("=== 已优化项明细 ===");
+    foreach (var f in dAll.Where(f => StateDetector.Detect(f) == true))
+        dlog($"  [{f.Category}] {f.Name}");
+    dSw.Close();
+    return;
+}
+
+if (args.Contains("--cleanup")){
     // 清理全量测试残留:删除测试写入的键值,恢复系统默认(之前恢复逻辑静默失败留下的)
     var cleanupSw = new StreamWriter(Path.Combine(AppContext.BaseDirectory, "cleanup_result.txt"), append: false, new UTF8Encoding(true));
     var clog = new Action<string>(s => { Console.WriteLine(s); cleanupSw.WriteLine(s); cleanupSw.Flush(); });

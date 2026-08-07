@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -52,9 +52,9 @@ public partial class AppsViewModel : ObservableObject
         new SoftwareEntry("PowerToys", "微软系统工具集,官方下载页", "https://learn.microsoft.com/windows/powertoys/", InstallKind.OpenUrl),
         new SoftwareEntry("PotPlayer", "多媒体播放器,官方下载页", "https://potplayer.daum.net/", InstallKind.OpenUrl),
 
-        // 本地安装:StartAllBack(静默安装,安装包放 %LocalAppData%\NControl\installers\)
-        new SoftwareEntry("StartAllBack", "Win11 开始菜单/任务栏增强,本地静默安装", "startallback.com", InstallKind.SilentInstaller,
-            InstallerFile: "StartAllBack_setup.exe", SilentArgs: "/S"),
+        // 本地安装:StartAllBack(7z SFX 安装包,先解压再运行内部 Cfg.exe 静默安装;安装包放 %LocalAppData%\NControl\installers\)
+        new SoftwareEntry("StartAllBack", "Win11 开始菜单/任务栏增强,本地静默安装(所有用户)", "startallback.com", InstallKind.SilentInstaller,
+            InstallerFile: "StartAllBack_setup.exe", ExtractFirst: true, InnerExe: "StartAllBackCfg.exe", InnerArgs: "/install /elevated /silent"),
         // 本地安装:GeekUninstaller(便携免安装单 exe,优先 D 盘,不可写自动回退 C 盘 + 桌面快捷方式)
         new SoftwareEntry("GeekUninstaller", "轻量卸载工具,便携免安装,优先安装到 D 盘(不可写自动回退 C 盘)并创建桌面快捷方式", "geekuninstaller.com", InstallKind.PortableExtract,
             InstallerFile: "geek.exe", TargetDir: @"D:\Program Files\GeekUninstaller", FallbackDir: @"C:\Program Files\GeekUninstaller", ExeName: "geek.exe")
@@ -102,7 +102,7 @@ public partial class AppsViewModel : ObservableObject
         catch { }
     }
 
-    /// <summary>静默安装:在后台运行安装器(安装包位于 %LocalAppData%\NControl\installers\).</summary>
+    /// <summary>静默安装:在后台运行安装器(安装包位于 %LocalAppData%\NControl\installers\)。</summary>
     private async Task SilentInstallAsync(SoftwareEntry entry)
     {
         var installDir = Path.Combine(
@@ -117,22 +117,77 @@ public partial class AppsViewModel : ObservableObject
 
         IsInstalling = true;
         InstallStatusText = $"正在静默安装 {entry.Name}…";
+        string? tempDir = null;
         try
         {
-            var psi = new System.Diagnostics.ProcessStartInfo
+            int exitCode;
+            if (entry.ExtractFirst)
             {
-                FileName = installerPath,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            // 静默参数(如 /S);需管理员时提升
-            if (!string.IsNullOrEmpty(entry.SilentArgs)) psi.Arguments = entry.SilentArgs;
-            var proc = System.Diagnostics.Process.Start(psi);
-            if (proc is not null)
-            {
-                await proc.WaitForExitAsync();
-                InstallStatusText = $"{entry.Name} 安装完成(退出码 {proc.ExitCode})";
+                // 7z SFX 安装包:先解压,再运行内部 exe(Repack 版 SFX 外壳不响应静默参数)
+                var sevenZip = Path.Combine(installDir, "7zr.exe");
+                if (!File.Exists(sevenZip))
+                {
+                    InstallStatusText = $"缺少解压工具 7zr.exe,请放入 {installDir}";
+                    return;
+                }
+                tempDir = Path.Combine(Path.GetTempPath(), "nctl_install_" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(tempDir);
+
+                var extractPsi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = sevenZip,
+                    Arguments = $"x \"{installerPath}\" -o\"{tempDir}\" -y",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                var extractProc = System.Diagnostics.Process.Start(extractPsi)!;
+                await extractProc.WaitForExitAsync();
+                if (extractProc.ExitCode != 0)
+                {
+                    InstallStatusText = $"{entry.Name} 解压失败(7z 退出码 {extractProc.ExitCode})";
+                    return;
+                }
+
+                // 定位内部 exe(可能在子目录,递归搜索)
+                var innerExe = entry.InnerExe ?? "";
+                var innerPath = Path.Combine(tempDir, innerExe);
+                if (!File.Exists(innerPath))
+                {
+                    innerPath = Directory.GetFiles(tempDir, innerExe, SearchOption.AllDirectories).FirstOrDefault() ?? innerPath;
+                }
+                if (!File.Exists(innerPath))
+                {
+                    InstallStatusText = $"{entry.Name} 内部安装程序 {innerExe} 未找到";
+                    return;
+                }
+
+                var innerPsi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = innerPath,
+                    Arguments = entry.InnerArgs ?? "",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                var innerProc = System.Diagnostics.Process.Start(innerPsi)!;
+                await innerProc.WaitForExitAsync();
+                exitCode = innerProc.ExitCode;
             }
+            else
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = installerPath,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                // 静默参数(如 /S)
+                if (!string.IsNullOrEmpty(entry.SilentArgs)) psi.Arguments = entry.SilentArgs;
+                var proc = System.Diagnostics.Process.Start(psi);
+                if (proc is null) { InstallStatusText = $"{entry.Name} 启动失败"; return; }
+                await proc.WaitForExitAsync();
+                exitCode = proc.ExitCode;
+            }
+            InstallStatusText = $"{entry.Name} 安装完成(退出码 {exitCode})";
         }
         catch (Exception ex)
         {
@@ -140,6 +195,11 @@ public partial class AppsViewModel : ObservableObject
         }
         finally
         {
+            // 清理临时解压目录
+            if (tempDir is not null)
+            {
+                try { Directory.Delete(tempDir, recursive: true); } catch { }
+            }
             IsInstalling = false;
         }
     }
@@ -366,7 +426,10 @@ public sealed record SoftwareEntry(
     string? SilentArgs = null,
     string? TargetDir = null,
     string? FallbackDir = null,
-    string? ExeName = null)
+    string? ExeName = null,
+    bool ExtractFirst = false,
+    string? InnerExe = null,
+    string? InnerArgs = null)
 {
     /// <summary>按钮文本:官网入口显示"打开官网",本地安装显示"安装"。</summary>
     public string ButtonText => Kind == InstallKind.OpenUrl ? "打开官网" : "安装";

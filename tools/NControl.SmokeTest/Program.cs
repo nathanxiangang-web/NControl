@@ -397,6 +397,10 @@ Check(appsVm.SoftwareEntries.Any(e => e.Name == "GeekUninstaller" && e.Kind == N
     "软件安装:GeekUninstaller 便携安装优先 D 盘", "");
 Check(appsVm.SoftwareEntries.Any(e => e.Name == "StartAllBack" && e.Kind == NControl.Presentation.ViewModels.InstallKind.SilentInstaller),
     "软件安装:StartAllBack 静默安装", "");
+var sab = appsVm.SoftwareEntries.FirstOrDefault(e => e.Name == "StartAllBack");
+Check(sab is not null && sab.ExtractFirst && sab.InnerExe == "StartAllBackCfg.exe"
+      && (sab.InnerArgs ?? "").Contains("/silent"),
+    "软件安装:StartAllBack 采用解压+内部 exe 静默安装(所有用户)", sab?.InnerArgs ?? "null");
 
 // 应用模块:卸载命令格式 + 恢复能力如实标注(文档 §12.3 不可逆/暂不支持恢复如实标注)
 var appsModule = catalog.ByModule(ModuleKind.Applications).ToArray();

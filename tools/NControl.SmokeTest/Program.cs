@@ -395,12 +395,13 @@ Check(appsVm.SoftwareEntries.Where(e => e.Kind == NControl.Presentation.ViewMode
     "软件安装官网条目均为 https 官方地址", string.Join(",", appsVm.SoftwareEntries.Where(e => e.Kind == NControl.Presentation.ViewModels.InstallKind.OpenUrl).Select(e => e.Name)));
 Check(appsVm.SoftwareEntries.Any(e => e.Name == "GeekUninstaller" && e.Kind == NControl.Presentation.ViewModels.InstallKind.PortableExtract && e.TargetDir == @"D:\Program Files\GeekUninstaller"),
     "软件安装:GeekUninstaller 便携安装优先 D 盘", "");
-Check(appsVm.SoftwareEntries.Any(e => e.Name == "StartAllBack" && e.Kind == NControl.Presentation.ViewModels.InstallKind.SilentInstaller),
-    "软件安装:StartAllBack 静默安装", "");
+Check(appsVm.SoftwareEntries.Any(e => e.Name == "StartAllBack" && e.Kind == NControl.Presentation.ViewModels.InstallKind.SilentInstaller)
+      || appsVm.SoftwareEntries.Any(e => e.Name == "StartAllBack" && e.Kind == NControl.Presentation.ViewModels.InstallKind.LaunchInstaller),
+    "软件安装:StartAllBack 本地安装(静默或手动)", "");
 var sab = appsVm.SoftwareEntries.FirstOrDefault(e => e.Name == "StartAllBack");
-Check(sab is not null && sab.ExtractFirst && sab.InnerExe == "StartAllBackCfg.exe"
-      && (sab.InnerArgs ?? "").Contains("/silent"),
-    "软件安装:StartAllBack 采用解压+内部 exe 静默安装(所有用户)", sab?.InnerArgs ?? "null");
+Check(sab is not null && sab.Kind == NControl.Presentation.ViewModels.InstallKind.LaunchInstaller
+      && sab.InstallerFile == "StartAllBack_setup.exe",
+    "软件安装:StartAllBack 手动安装向导模式(点击弹出安装包,用户自行完成)", sab?.InstallerFile ?? "null");
 
 // 应用模块:卸载命令格式 + 恢复能力如实标注(文档 §12.3 不可逆/暂不支持恢复如实标注)
 var appsModule = catalog.ByModule(ModuleKind.Applications).ToArray();

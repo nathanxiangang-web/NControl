@@ -52,9 +52,9 @@ public partial class AppsViewModel : ObservableObject
         new SoftwareEntry("PowerToys", "微软系统工具集,官方下载页", "https://learn.microsoft.com/windows/powertoys/", InstallKind.OpenUrl),
         new SoftwareEntry("PotPlayer", "多媒体播放器,官方下载页", "https://potplayer.daum.net/", InstallKind.OpenUrl),
 
-        // 本地安装:StartAllBack(7z SFX 安装包,先解压再运行内部 Cfg.exe 静默安装;安装包放 %LocalAppData%\NControl\installers\)
-        new SoftwareEntry("StartAllBack", "Win11 开始菜单/任务栏增强,本地静默安装(所有用户)", "startallback.com", InstallKind.SilentInstaller,
-            InstallerFile: "StartAllBack_setup.exe", ExtractFirst: true, InnerExe: "StartAllBackCfg.exe", InnerArgs: "/install /elevated /silent"),
+        // 本地安装:StartAllBack(安装包放 %LocalAppData%\NControl\installers\,点击弹出官方向导手动安装)
+        new SoftwareEntry("StartAllBack", "Win11 开始菜单/任务栏增强,本地安装包(点击后手动完成安装)", "startallback.com", InstallKind.LaunchInstaller,
+            InstallerFile: "StartAllBack_setup.exe"),
         // 本地安装:GeekUninstaller(便携免安装单 exe,优先 D 盘,不可写自动回退 C 盘 + 桌面快捷方式)
         new SoftwareEntry("GeekUninstaller", "轻量卸载工具,便携免安装,优先安装到 D 盘(不可写自动回退 C 盘)并创建桌面快捷方式", "geekuninstaller.com", InstallKind.PortableExtract,
             InstallerFile: "geek.exe", TargetDir: @"D:\Program Files\GeekUninstaller", FallbackDir: @"C:\Program Files\GeekUninstaller", ExeName: "geek.exe")
@@ -84,6 +84,9 @@ public partial class AppsViewModel : ObservableObject
             case InstallKind.PortableExtract:
                 await PortableInstallAsync(entry);
                 break;
+            case InstallKind.LaunchInstaller:
+                LaunchInstaller(entry);
+                break;
         }
     }
 
@@ -100,6 +103,33 @@ public partial class AppsViewModel : ObservableObject
             });
         }
         catch { }
+    }
+
+    /// <summary>启动本地安装包,弹出官方安装向导由用户手动完成(不静默,避免破解注入风险)。</summary>
+    private void LaunchInstaller(SoftwareEntry entry)
+    {
+        var installDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "NControl", "installers");
+        var installerPath = Path.Combine(installDir, entry.InstallerFile ?? "");
+        if (!File.Exists(installerPath))
+        {
+            InstallStatusText = $"未找到安装包 {entry.InstallerFile},请先将其放入 {installDir}";
+            return;
+        }
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = installerPath,
+                UseShellExecute = true
+            });
+            InstallStatusText = $"已启动 {entry.Name} 安装向导,请按提示完成安装";
+        }
+        catch (Exception ex)
+        {
+            InstallStatusText = $"启动安装包失败:{ex.Message}";
+        }
     }
 
     /// <summary>静默安装:在后台运行安装器(安装包位于 %LocalAppData%\NControl\installers\)。</summary>
@@ -403,7 +433,7 @@ public partial class AppsViewModel : ObservableObject
     }
 }
 
-/// <summary>安装类型:官网入口 / 本地静默安装 / 便携解压复制。</summary>
+/// <summary>安装类型:官网入口 / 本地静默安装 / 便携解压复制 / 本地安装包手动安装。</summary>
 public enum InstallKind
 {
     /// <summary>浏览器打开官网下载页。</summary>
@@ -413,7 +443,10 @@ public enum InstallKind
     SilentInstaller,
 
     /// <summary>便携版:解压 zip 到目标目录 + 创建桌面快捷方式。</summary>
-    PortableExtract
+    PortableExtract,
+
+    /// <summary>本地安装包:弹出官方安装向导,由用户手动完成(不静默)。</summary>
+    LaunchInstaller
 }
 
 /// <summary>软件安装页条目:软件名 + 说明 + 入口(官网地址/本地安装包)。</summary>

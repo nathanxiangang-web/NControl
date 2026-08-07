@@ -214,6 +214,15 @@ var restorePower = RestoreCommandBuilder.Build(RestoreProbe("t.restore-power", "
 Check(restorePower?.Contains("powercfg /h on") == true && restorePower?.Contains("Remove-ItemProperty") == true,
     "恢复生成器:电源特例 + 注册表删除混合", restorePower);
 
+// 回归:防火墙恢复必须"启用 + 清理组策略残留",且不得删除本地 EnableFirewall(否则安全中心显示由组织管理且恢复不生效)
+var restoreFw = RestoreCommandBuilder.Build(RestoreProbe("t.restore-fw", "Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False -ErrorAction SilentlyContinue; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\StandardProfile' -Name 'EnableFirewall' -Value 0 -Type DWord -Force"));
+Check(restoreFw?.Contains("Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True") == true,
+    "恢复生成器:防火墙特例 -> 恢复启用", restoreFw);
+Check(restoreFw?.Contains("Policies\\Microsoft\\WindowsFirewall") == true,
+    "恢复生成器:防火墙特例 -> 清理组策略残留", restoreFw);
+Check(restoreFw?.Contains("Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy") != true,
+    "恢复生成器:防火墙特例 -> 不删除本地 EnableFirewall(避免配置变未配置)", restoreFw);
+
 // 目录中可恢复功能占比(注册表/服务类应绝大多数可推导)
 var restorable = catalog.All.Count(f => RestoreCommandBuilder.Build(f) is not null);
 Console.WriteLine($"可恢复功能: {restorable} / {catalog.All.Count}");

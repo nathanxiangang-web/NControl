@@ -3,8 +3,8 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- 应用本身不需要管理员权限;需要提权的功能在执行中心按需触发 UAC -->
-        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+        <!-- 默认以管理员身份运行:优化类功能大部分需要写 HKLM/服务,避免执行时反复弹 UAC -->
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

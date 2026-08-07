@@ -39,10 +39,21 @@ public static class RestoreCommandBuilder
             parts.Add("powercfg /h on");
         if (cmd.Contains("Disable-MMAgent", StringComparison.OrdinalIgnoreCase))
             parts.Add("Enable-MMAgent -MemoryCompression -ErrorAction SilentlyContinue");
-        if (cmd.Contains("Set-NetFirewallProfile", StringComparison.OrdinalIgnoreCase))
-            parts.Add("Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True");
         if (cmd.Contains("Disable-ComputerRestore", StringComparison.OrdinalIgnoreCase))
             parts.Add("Enable-ComputerRestore -Drive 'C:\\' -ErrorAction SilentlyContinue");
+
+        // 防火墙:恢复为启用,并清理组策略残留(否则安全中心显示"由你的组织管理"且恢复不生效)
+        var isFirewall = cmd.Contains("Set-NetFirewallProfile", StringComparison.OrdinalIgnoreCase);
+        if (isFirewall)
+        {
+            parts.Add("Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True -ErrorAction SilentlyContinue");
+            // 清理优化工具曾写入的策略残留:值删除后,若 Profile 子键为空则一并删除,避免安全中心横幅残留
+            parts.Add(
+                "Remove-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile' -Recurse -Force -ErrorAction SilentlyContinue; " +
+                "Remove-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PrivateProfile' -Recurse -Force -ErrorAction SilentlyContinue; " +
+                "Remove-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PublicProfile' -Recurse -Force -ErrorAction SilentlyContinue; " +
+                "if ((Test-Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall') -and -not (Get-ChildItem 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall' -ErrorAction SilentlyContinue)) { Remove-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall' -Force -ErrorAction SilentlyContinue }");
+        }
 
         // ---- 服务类:恢复为手动启动 ----
         var serviceNames = ServicePattern.Matches(cmd)
@@ -57,6 +68,15 @@ public static class RestoreCommandBuilder
             .Select(m => (Path: m.Groups[1].Value, Name: m.Groups[2].Value))
             .Distinct()
             .ToArray();
+
+        // 防火墙:Set-NetFirewallProfile 已负责写回 EnableFirewall=1,跳过本地 FirewallPolicy 值的删除,
+        // 避免“启用后又删除”导致配置变为未配置(安全中心显示由组织管理)。
+        if (isFirewall)
+            pairs = pairs
+                .Where(p => !(p.Path.Contains("FirewallPolicy", StringComparison.OrdinalIgnoreCase)
+                              && p.Name.Equals("EnableFirewall", StringComparison.OrdinalIgnoreCase)))
+                .ToArray();
+
         if (pairs.Length > 0)
             parts.Add(string.Join("; ", pairs.Select(p => $"Remove-ItemProperty -Path '{p.Path}' -Name '{p.Name}' -ErrorAction SilentlyContinue")));
 

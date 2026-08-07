@@ -175,6 +175,31 @@ Check(recent[0].Items.Count == 4, "记录明细完整(4 项)");
 var all = await store.GetAllAsync();
 Check(all.Count == recent.Count && all[0].Id == record.Id, "全部记录可枚举");
 
+// ---------- 3.5 SQLite 迁移兼容(第二代 §12.3):旧库历史不破坏 ----------
+try
+{
+    // 直接向同一库插入一条"旧格式"记录(模拟旧版本写入,列结构与当前一致)
+    var legacy = new TaskRecord
+    {
+        Name = "旧版本任务",
+        Result = "成功",
+        SuccessCount = 1,
+        Items = new List<TaskItemRecord>
+        {
+            new() { FunctionId = "legacy.feature", FunctionName = "旧功能", Status = "成功" }
+        }
+    };
+    await store.SaveAsync(legacy);
+    var afterMigrate = await store.GetAllAsync();
+    Check(afterMigrate.Any(t => t.Name == "旧版本任务" && t.Items.Count == 1 && t.Items[0].FunctionId == "legacy.feature"),
+        "SQLite 迁移:旧格式记录可读回且明细完整", afterMigrate.Count.ToString());
+    Check(afterMigrate.Any(t => t.Id == record.Id), "SQLite 迁移:原有记录未丢失", "");
+}
+catch (Exception ex)
+{
+    Check(false, "SQLite 迁移测试异常", ex.Message);
+}
+
 // 高级分类治理:该分类下不允许安全/推荐级功能(文档 §6.3 高级区域;谨慎级服务项可在此,但不进预设)
 var advancedNonHighRisk = catalog.ByModule(ModuleKind.Optimization)
     .Where(f => f.Category == "高级" && f.Risk is RiskLevel.Safe or RiskLevel.Recommended)

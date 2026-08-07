@@ -23,6 +23,11 @@ class UiVerify
             RunAppsVerify();
             return;
         }
+        if (args.Length > 0 && args[0] == "--gen2")
+        {
+            RunGen2Verify();
+            return;
+        }
         var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\NControl.FunctionTest\uiverify.txt", append: false, new UTF8Encoding(true));
         var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
 
@@ -237,5 +242,71 @@ class UiVerify
             L($"扫描结果文案: {(scanText is null ? "未找到'扫描完成'" : $"找到: {scanText}")}");
         }
         log.Close();
+    }
+
+    static void RunGen2Verify()
+    {
+        var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\gen2_uiverify.txt", append: false, new UTF8Encoding(true));
+        var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
+        var procs = Process.GetProcessesByName("NControl");
+        Process? target = procs.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
+        if (target is null) { L("FAIL 无主窗口进程"); log.Close(); return; }
+        var root = AutomationElement.FromHandle(target.MainWindowHandle);
+
+        // 1. 一键优化页:我的方案区块
+        Click(root, target, "一键优化", L);
+        System.Threading.Thread.Sleep(1200);
+        var planTitle = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "我的方案"));
+        L($"一键优化页'我的方案'区块: {(planTitle is null ? "未找到" : "找到")}");
+        var saveBtn = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "保存为我的方案"));
+        L($"'保存为我的方案'按钮: {(saveBtn is null ? "未找到" : "找到")}");
+        var exportBtn = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "导出方案"));
+        L($"'导出方案'按钮: {(exportBtn is null ? "未找到" : "找到")}");
+        var importBtn = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "从配置导入"));
+        L($"'从配置导入'按钮: {(importBtn is null ? "未找到" : "找到")}");
+
+        // 2. 清理维护页:扫描区块
+        Click(root, target, "清理维护", L);
+        System.Threading.Thread.Sleep(1200);
+        var scanTitle = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "扫描可清理内容"));
+        L($"清理页'扫描可清理内容'区块: {(scanTitle is null ? "未找到" : "找到")}");
+        var startScan = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "开始扫描"));
+        L($"'开始扫描'按钮: {(startScan is null ? "未找到" : "找到")}");
+        if (startScan is not null)
+        {
+            var sr = startScan.Current.BoundingRectangle;
+            SetForegroundWindow(target.MainWindowHandle);
+            System.Threading.Thread.Sleep(200);
+            SetCursorPos((int)(sr.X + sr.Width / 2), (int)(sr.Y + sr.Height / 2));
+            System.Threading.Thread.Sleep(150);
+            mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
+            mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
+            L("已点击'开始扫描'");
+            System.Threading.Thread.Sleep(25000);
+            // 扫描完成文案前缀匹配
+            var all3 = root.FindAll(TreeScope.Descendants, Condition.TrueCondition);
+            string? scanDone = null;
+            foreach (AutomationElement e in all3)
+            {
+                var n = e.Current.Name;
+                if (n is not null && n.StartsWith("扫描完成", StringComparison.Ordinal)) { scanDone = n; break; }
+            }
+            L($"扫描结果: {(scanDone is null ? "未找到'扫描完成'" : scanDone)}");
+        }
+        log.Close();
+    }
+
+    static void Click(AutomationElement root, Process target, string name, Action<string> L)
+    {
+        var el = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, name));
+        if (el is null) { L($"FAIL 未找到元素 '{name}'"); return; }
+        var r = el.Current.BoundingRectangle;
+        SetForegroundWindow(target.MainWindowHandle);
+        System.Threading.Thread.Sleep(200);
+        SetCursorPos((int)(r.X + r.Width / 2), (int)(r.Y + r.Height / 2));
+        System.Threading.Thread.Sleep(150);
+        mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
+        mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
+        L($"已点击 '{name}'");
     }
 }

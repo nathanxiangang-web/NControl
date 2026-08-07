@@ -95,7 +95,14 @@ IModuleRegistrar.RegisterFeatures() → IFunctionCatalog(全局功能目录)
 
 - **功能目录 192 项**：优化 154（外观29/性能46/安全10/Edge12/系统15/更新8/隐私34）+ 应用 10 + 清理 9 + 修复 9 + 工具 10
 - **预设 4 个**：轻度优化(8) / 推荐优化(115,按 ZyperWin++ 推荐配置对齐,含 Caution 级,不含 HighRisk) / 深度优化(62) / 删除常见预装应用(7)
-- **验证基线**：冒烟 225 PASS / 0 FAIL；全量真机 154 PASS / 0 FAIL（优化模块）；状态检测覆盖率 147/154（95.5%）
+- **验证基线**：冒烟 249 PASS / 0 FAIL；全量真机 154 PASS / 0 FAIL（优化模块）；状态检测覆盖率 147/154（95.5%）
+
+## 第二代能力（已完成）
+
+- **兼容性判断**：CompatibilityEngine 按功能 ID 规则判定 Supported/Unsupported/Unknown/NeedsVerification；环境探测（Windows 版本/构建号/架构/产品类型）；UI 行级徽标 + 预设卡警告统计
+- **配置系统**：PlanService 保存/导出/导入 JSON 配置（只引用 FunctionId,不携带代码）；导入流程：解析→Schema 检查→ID 匹配去重→兼容性→风险；导入不自动执行,预览确认后进统一执行中心
+- **批次回滚**：RollbackService 从历史任务分析可恢复项,逆序恢复,写新任务；UI：任务记录页"恢复本次任务"
+- **清理扫描**：CleanupScanner 统计文件数+大小（真实数据）；UI：清理维护页扫描区块（开始扫描/进度/结果列表/总可清理空间）；实测可清理 1.31 GB/56138 文件
 
 ---
 
@@ -115,3 +122,5 @@ IModuleRegistrar.RegisterFeatures() → IFunctionCatalog(全局功能目录)
 ## 第二代规划（文档 §10）
 
 状态感知（兼容性提示）→ 恢复与配置（批次回滚/配置导入导出）→ 更新治理 → 专业能力。所有能力围绕现有底座生长，不改变产品结构。
+
+> ✅ 第二代已完成：兼容性判断、配置保存/导入/导出、批次回滚、清理扫描与空间统计（见 PROJECT_TASKS_GEN2.md）

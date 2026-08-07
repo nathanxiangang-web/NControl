@@ -305,6 +305,25 @@ Check(planService.GetAll().Count == 0, "配置:删除方案成功", "");
 File.Delete(exportPath); File.Delete(badPath); File.Delete(hrExport);
 Directory.Delete(planDir, true);
 
+// ---------- 批次回滚断言(第二代 §8) ----------
+var rollbackService = new RollbackService(catalog, center, store);
+// 构造一个历史任务(模拟已执行)
+var fakeTask = new TaskRecord
+{
+    Name = "冒烟测试任务",
+    Result = "成功",
+    Items = new List<TaskItemRecord>
+    {
+        new() { FunctionId = "explorer.open-this-pc", FunctionName = "我的电脑", Status = "成功" },
+        new() { FunctionId = "unknown.old-feature", FunctionName = "旧功能", Status = "成功" }
+    }
+};
+var rbAnalysis = rollbackService.Analyze(fakeTask);
+Check(rbAnalysis.RestorableCount >= 1, "回滚:可恢复项分析(有恢复命令)", rbAnalysis.RestorableCount.ToString());
+Check(rbAnalysis.NotSupportedCount == 1, "回滚:未知功能标记不可恢复", rbAnalysis.NotSupportedCount.ToString());
+Check(rbAnalysis.Restorable.All(i => !string.IsNullOrWhiteSpace(i.RestoreCommand)),
+    "回滚:可恢复项均带恢复命令", "");
+
 // 目录中可恢复功能占比(注册表/服务类应绝大多数可推导)
 var restorable = catalog.All.Count(f => RestoreCommandBuilder.Build(f) is not null);
 Console.WriteLine($"可恢复功能: {restorable} / {catalog.All.Count}");

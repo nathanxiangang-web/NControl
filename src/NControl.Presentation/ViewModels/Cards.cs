@@ -421,9 +421,14 @@ public partial class RepairCardViewModel : ObservableObject
 /// <summary>任务记录卡。</summary>
 public partial class RecordCardViewModel : ObservableObject
 {
-    public RecordCardViewModel(TaskRecord record)
+    private readonly RollbackService? _rollback;
+    private readonly NavigationService? _nav;
+
+    public RecordCardViewModel(TaskRecord record, RollbackService? rollback = null, NavigationService? nav = null)
     {
         Record = record;
+        _rollback = rollback;
+        _nav = nav;
         TimeText = record.FinishedAt?.ToString("yyyy-MM-dd HH:mm") ?? record.StartedAt.ToString("yyyy-MM-dd HH:mm");
         SummaryText = $"成功 {record.SuccessCount} · 失败 {record.FailedCount} · 取消 {record.CancelledCount}";
         PillBrush = record.Result switch
@@ -440,6 +445,18 @@ public partial class RecordCardViewModel : ObservableObject
         };
         Items = new System.Collections.ObjectModel.ObservableCollection<RecordItemViewModel>(
             record.Items.Select(i => new RecordItemViewModel(i)));
+
+        // 批次回滚分析(第二代 §8):统计可恢复项
+        if (_rollback is not null)
+        {
+            var analysis = _rollback.Analyze(record);
+            RestorableCount = analysis.RestorableCount;
+            NotRestorableCount = analysis.NotSupportedCount;
+            HasRestorable = RestorableCount > 0;
+            RollbackSummary = RestorableCount > 0
+                ? $"可恢复 {RestorableCount} 项 · 不可恢复 {NotRestorableCount} 项"
+                : $"不可恢复 {NotRestorableCount} 项";
+        }
     }
 
     public TaskRecord Record { get; }
@@ -452,11 +469,53 @@ public partial class RecordCardViewModel : ObservableObject
     public bool RequiresRestart => Record.RequiresRestart;
     public System.Collections.ObjectModel.ObservableCollection<RecordItemViewModel> Items { get; }
 
+    /// <summary>可恢复项数量(第二代 §8)。</summary>
+    public int RestorableCount { get; }
+
+    /// <summary>不可恢复项数量。</summary>
+    public int NotRestorableCount { get; }
+
+    /// <summary>是否存在可恢复项。</summary>
+    public bool HasRestorable { get; }
+
+    /// <summary>回滚摘要文本。</summary>
+    public string RollbackSummary { get; } = "";
+
+    /// <summary>回滚执行中。</summary>
+    [ObservableProperty]
+    private bool isRollingBack;
+
+    /// <summary>回滚结果文本。</summary>
+    [ObservableProperty]
+    private string rollbackResultText = "";
+
     [ObservableProperty]
     private bool isExpanded;
 
     [RelayCommand]
     private void ToggleDetails() => IsExpanded = !IsExpanded;
+
+    /// <summary>恢复本次任务(批次回滚,第二代 §8):逆序恢复可恢复项,写新任务记录。</summary>
+    [RelayCommand]
+    private async Task RollbackAsync()
+    {
+        if (_rollback is null || _nav is null || IsRollingBack) return;
+        IsRollingBack = true;
+        RollbackResultText = "正在分析并执行回滚…";
+        try
+        {
+            var record = await _rollback.RollbackAsync(Record);
+            RollbackResultText = $"回滚完成:成功 {record.SuccessCount} · 失败 {record.FailedCount} · 取消 {record.CancelledCount}";
+        }
+        catch (Exception ex)
+        {
+            RollbackResultText = $"回滚失败:{ex.Message}";
+        }
+        finally
+        {
+            IsRollingBack = false;
+        }
+    }
 }
 
 /// <summary>任务记录单项。</summary>

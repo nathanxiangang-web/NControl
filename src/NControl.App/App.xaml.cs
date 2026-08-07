@@ -76,6 +76,7 @@ public partial class App : Application
 builder.Services.AddSingleton<IEnvironmentProbe, WindowsEnvironmentProbe>();
 builder.Services.AddSingleton<CompatibilityEngine>();
 builder.Services.AddSingleton<IPlanService, PlanService>();
+builder.Services.AddSingleton<RollbackService>();
 
         // 业务模块
         builder.Services.AddSingleton<IModuleRegistrar, OptimizationModuleRegistrar>();

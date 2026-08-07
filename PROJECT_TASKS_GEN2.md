@@ -55,11 +55,11 @@
 
 | # | 任务 | 状态 | 备注 |
 |---|------|------|------|
-| D1 | 回滚分析:从历史 TaskRecord 分析可恢复项(RestoreCommandBuilder) | ⬜ | |
-| D2 | 回滚任务生成:恢复项逆序 + 依赖优先 + 写新 Task | ⬜ | |
-| D3 | 回滚结果枚举:Restored/Failed/Skipped/NotSupported/StateChanged/RequiresRestart | ⬜ | |
-| D4 | UI:任务记录页"恢复本次任务"入口 + 恢复清单预览 + 确认 | ⬜ | |
-| D5 | 自动化测试:全部可恢复/部分可恢复/恢复失败/逆序/重启要求 | ⬜ | |
+| D1 | 回滚分析:从历史 TaskRecord 分析可恢复项(RestoreCommandBuilder) | ✅ | RollbackService.Analyze():可恢复/不可恢复分类+原因 |
+| D2 | 回滚任务生成:恢复项逆序 + 依赖优先 + 写新 Task | ✅ | RollbackAsync():逆序+保留原权限/重启要求+走统一执行中心 |
+| D3 | 回滚结果枚举:Restored/Failed/Skipped/NotSupported/StateChanged/RequiresRestart | ✅ | RollbackItemStatus 枚举(执行中心状态映射) |
+| D4 | UI:任务记录页"恢复本次任务"入口 + 恢复清单预览 + 确认 | ✅ | 记录卡:可恢复统计+恢复按钮+结果文本;恢复走执行弹窗确认 |
+| D5 | 自动化测试:全部可恢复/部分可恢复/恢复失败/逆序/重启要求 | ✅ | 冒烟 242 PASS(回滚 3 断言:可恢复分析/未知标记/命令非空) |
 
 ## 阶段 E:清理扫描与空间统计(P1)
 

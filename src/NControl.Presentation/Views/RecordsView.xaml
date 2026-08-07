@@ -41,6 +41,25 @@
                                        Style="{StaticResource SubtleText}" Margin="0,6,0,0"
                                        Visibility="{Binding RequiresRestart, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
 
+                            <!-- 批次回滚(第二代 §8) -->
+                            <StackPanel Margin="0,10,0,0"
+                                        Visibility="{Binding HasRestorable, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding RollbackSummary}" Style="{StaticResource SubtleText}"
+                                               VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Content="恢复本次任务" Style="{StaticResource SecondaryButton}"
+                                            Height="28" Padding="12,0" Command="{Binding RollbackCommand}"
+                                            IsEnabled="{Binding IsRollingBack, Converter={x:Static conv:InverseBoolConverter.Instance}}"
+                                            ToolTip="把本次任务已执行的功能项作为一个批次恢复(逆序),恢复本身会写入新的任务记录" />
+                                </Grid>
+                                <TextBlock Text="{Binding RollbackResultText}" Style="{StaticResource SubtleText}" Margin="0,4,0,0"
+                                           TextWrapping="Wrap" Foreground="{StaticResource PrimaryBrush}" />
+                            </StackPanel>
+
                             <Expander IsExpanded="{Binding IsExpanded}" Margin="0,8,0,0">
                                 <Expander.Header>
                                     <TextBlock Text="查看明细" Foreground="{StaticResource PrimaryBrush}" FontSize="12" FontWeight="SemiBold" />

@@ -51,6 +51,12 @@ public sealed class FunctionItem
     /// <summary>即时工具:点击即运行,不参与批量选择流程(产品文档 §5.3)。</summary>
     public bool IsTool { get; init; }
 
+    /// <summary>
+    /// 控制台窗口执行:为 true 时在独立 cmd 控制台窗口运行命令,实时显示进度(用于 DISM/SFC 等长耗时修复)。
+    /// 默认 false(后台静默执行,输出写入任务记录)。
+    /// </summary>
+    public bool UseConsoleWindow { get; init; }
+
     /// <summary>附加信息(如 Appx 包名)。</summary>
     public string? Extra { get; init; }
 

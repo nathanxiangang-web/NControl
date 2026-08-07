@@ -74,10 +74,43 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
 
         var needAdmin = item.RequiresAdmin && !ElevationHelper.IsElevated();
 
+        // 控制台窗口模式:在独立 cmd 窗口实时显示进度(用于 DISM/SFC 等长耗时修复命令)
+        if (item.UseConsoleWindow)
+        {
+            return LaunchConsoleWindow(script, item);
+        }
+
         if (needAdmin)
             return await RunElevatedAsync(script, item.TimeoutSeconds, ct);
 
         return await RunDirectAsync(script, item.TimeoutSeconds, onOutput, ct);
+    }
+
+    /// <summary>
+    /// 控制台窗口模式:启动独立控制台窗口实时显示命令进度(用于 DISM/SFC 等长耗时修复)。
+    /// 窗口保留(-NoExit),用户可查看进度;完成后手动关闭。返回成功后写入任务记录。
+    /// </summary>
+    private ExecutionResult LaunchConsoleWindow(string script, FunctionItem item)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                UseShellExecute = true, // 使用 ShellExecute 以便窗口独立显示
+                CreateNoWindow = false
+            };
+            // 在 cmd 中调用 powershell -NoExit 运行脚本,保留窗口显示进度
+            psi.ArgumentList.Add("/k");
+            psi.ArgumentList.Add($"powershell.exe -NoExit -ExecutionPolicy Bypass -Command \"{script.Replace("\"", "\\\"")}\"");
+            System.Diagnostics.Process.Start(psi);
+            return new ExecutionResult(true, 0,
+                $"已在控制台窗口启动「{item.Name}」,请查看窗口中的执行进度;完成后可关闭窗口。", null);
+        }
+        catch (Exception ex)
+        {
+            return new ExecutionResult(false, -1, null, $"启动控制台窗口失败:{ex.Message}");
+        }
     }
 
     private async Task<ExecutionResult> RunDirectAsync(

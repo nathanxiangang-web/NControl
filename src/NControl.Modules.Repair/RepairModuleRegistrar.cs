@@ -14,10 +14,11 @@ public sealed class RepairModuleRegistrar : IModuleRegistrar
     {
         // ---------- 系统映像与文件 ----------
         // 合并项:连续执行 DISM 扫描健康 → 修复映像 → SFC 扫描(常规修复顺序,耗时较长)
+        // 控制台窗口模式:弹出 cmd 窗口实时显示进度
         catalog.Register(F("repair.system-integrity", "系统映像与文件修复", "系统映像与文件",
-            "连续执行:① DISM 扫描映像健康 → ② DISM 修复映像 → ③ SFC 扫描系统文件。适用于系统文件损坏、更新失败、蓝屏等场景,耗时较长(建议预留 20-30 分钟)。",
+            "连续执行:① DISM 扫描映像健康 → ② DISM 修复映像 → ③ SFC 扫描系统文件。适用于系统文件损坏、更新失败、蓝屏等场景,耗时较长(建议预留 20-30 分钟)。\n点击后将在控制台窗口运行,实时显示进度。",
             RiskLevel.Caution, true, RestartRequirement.None,
-            "DISM.exe /Online /Cleanup-Image /ScanHealth; DISM.exe /Online /Cleanup-Image /RestoreHealth; sfc.exe /scannow", 5400));
+            "DISM.exe /Online /Cleanup-Image /ScanHealth; DISM.exe /Online /Cleanup-Image /RestoreHealth; sfc.exe /scannow", 5400, useConsoleWindow: true));
 
         // ---------- 更新与商店 ----------
         catalog.Register(F("repair.update-reset", "重置 Windows 更新组件", "更新与商店",
@@ -59,7 +60,8 @@ public sealed class RepairModuleRegistrar : IModuleRegistrar
 
     private static FunctionItem F(
         string id, string name, string category, string description, RiskLevel risk,
-        bool admin, RestartRequirement restart, string command, int timeoutSeconds = 180) => new()
+        bool admin, RestartRequirement restart, string command, int timeoutSeconds = 180,
+        bool useConsoleWindow = false) => new()
     {
         Id = id,
         Name = name,
@@ -71,6 +73,7 @@ public sealed class RepairModuleRegistrar : IModuleRegistrar
         Restart = restart,
         Source = "Windows 系统内置工具",
         Command = command,
-        TimeoutSeconds = timeoutSeconds
+        TimeoutSeconds = timeoutSeconds,
+        UseConsoleWindow = useConsoleWindow
     };
 }

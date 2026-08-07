@@ -124,15 +124,18 @@
                                     <TextBlock Text="{Binding Description}" Style="{StaticResource SubtleText}" Margin="0,4,0,0"
                                                TextWrapping="Wrap" />
                                 </StackPanel>
-                                <Button Grid.Column="1" Content="打开官网" Style="{StaticResource SecondaryButton}"
+                                <Button Grid.Column="1" Content="{Binding ButtonText}" Style="{StaticResource SecondaryButton}"
                                         Height="30" Padding="12,0" VerticalAlignment="Center"
-                                        Command="{Binding DataContext.OpenSoftwareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Command="{Binding DataContext.InstallSoftwareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}" />
                             </Grid>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <TextBlock Text="{Binding InstallStatusText}" Style="{StaticResource SubtleText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                       Foreground="{StaticResource PrimaryBrush}"
+                       Visibility="{Binding InstallStatusText, Converter={x:Static conv:StringNotEmptyToVisibilityConverter.Instance}}" />
             <TextBlock Text="提示:从官方渠道下载安装,避免使用来路不明的安装包。" Style="{StaticResource SubtleText}" Margin="0,6,0,0" />
         </StackPanel>
     </StackPanel>

@@ -14,6 +14,7 @@ class UiVerify
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
+    [DllImport("user32.dll")] static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
     [StructLayout(LayoutKind.Sequential)] struct RECT { public int L, T, R, B; }
 
     static void Main(string[] args)
@@ -31,6 +32,11 @@ class UiVerify
         if (args.Length > 0 && args[0] == "--components")
         {
             RunComponentsVerify();
+            return;
+        }
+        if (args.Length > 0 && args[0] == "--softinstall")
+        {
+            RunSoftInstallVerify();
             return;
         }
         var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\NControl.FunctionTest\uiverify.txt", append: false, new UTF8Encoding(true));
@@ -357,5 +363,49 @@ class UiVerify
             }
         }
         log.Close();
+    }
+
+    static void RunSoftInstallVerify()
+    {
+        var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\softinstall_uiverify.txt", append: false, new UTF8Encoding(true));
+        var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
+        var procs = Process.GetProcessesByName("NControl");
+        Process? target = procs.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
+        if (target is null) { L("FAIL 无主窗口进程"); log.Close(); return; }
+        var root = AutomationElement.FromHandle(target.MainWindowHandle);
+        SetForegroundWindow(target.MainWindowHandle);
+        System.Threading.Thread.Sleep(300);
+
+        // 键盘激活导航
+        KeyActivate(root, "应用管理", L);
+        System.Threading.Thread.Sleep(1200);
+        KeyActivate(root, "软件安装", L);
+        System.Threading.Thread.Sleep(1200);
+
+        // 检查新条目
+        foreach (var name in new[] { "StartAllBack", "GeekUninstaller" })
+        {
+            var el = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, name));
+            L($"条目 [{name}]: {(el is null ? "未找到" : "找到")}");
+        }
+        // 安装按钮
+        var btns = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "安装"));
+        L($"'安装'按钮数: {btns.Count}");
+        log.Close();
+    }
+
+    static void KeyActivate(AutomationElement root, string name, Action<string> L)
+    {
+        var txt = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, name));
+        if (txt is null) { L($"FAIL '{name}' 未找到"); return; }
+        AutomationElement? el = txt;
+        while (el is not null && el.Current.ControlType != ControlType.RadioButton && el.Current.ControlType != ControlType.Button)
+            el = TreeWalker.ControlViewWalker.GetParent(el);
+        if (el is null) { L($"FAIL '{name}' 无激活元素"); return; }
+        el.SetFocus();
+        System.Threading.Thread.Sleep(300);
+        keybd_event(0x20, 0, 0, UIntPtr.Zero);
+        keybd_event(0x20, 0, 2, UIntPtr.Zero);
+        L($"已键盘激活 '{name}'");
     }
 }

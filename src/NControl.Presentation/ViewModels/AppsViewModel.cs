@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.IO;
+using System.IO.Compression;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NControl.Core;
@@ -38,36 +40,226 @@ public partial class AppsViewModel : ObservableObject
     public ObservableCollection<AppRowViewModel> Rows { get; } = new();
     public PresetCardViewModel? BloatPreset { get; }
 
-    /// <summary>软件安装页签:常用软件官网入口(点击打开浏览器)。</summary>
+    /// <summary>软件安装页签:常用软件入口(官网 / 本地静默安装 / 便携复制)。</summary>
     public IReadOnlyList<SoftwareEntry> SoftwareEntries { get; } = new[]
     {
-        new SoftwareEntry("Chrome", "Google 浏览器,官方下载页", "https://www.google.com/chrome/"),
-        new SoftwareEntry("Firefox", "Mozilla 浏览器,官方下载页", "https://www.mozilla.org/firefox/"),
-        new SoftwareEntry("7-Zip", "开源压缩软件,官方下载页", "https://www.7-zip.org/"),
-        new SoftwareEntry("VLC", "开源播放器,官方下载页", "https://www.videolan.org/vlc/"),
-        new SoftwareEntry("VS Code", "微软开源代码编辑器,官方下载页", "https://code.visualstudio.com/"),
-        new SoftwareEntry("Everything", "本地文件搜索工具,官方下载页", "https://www.voidtools.com/"),
-        new SoftwareEntry("PowerToys", "微软系统工具集,官方下载页", "https://learn.microsoft.com/windows/powertoys/"),
-        new SoftwareEntry("PotPlayer", "多媒体播放器,官方下载页", "https://potplayer.daum.net/")
+        new SoftwareEntry("Chrome", "Google 浏览器,官方下载页", "https://www.google.com/chrome/", InstallKind.OpenUrl),
+        new SoftwareEntry("Firefox", "Mozilla 浏览器,官方下载页", "https://www.mozilla.org/firefox/", InstallKind.OpenUrl),
+        new SoftwareEntry("7-Zip", "开源压缩软件,官方下载页", "https://www.7-zip.org/", InstallKind.OpenUrl),
+        new SoftwareEntry("VLC", "开源播放器,官方下载页", "https://www.videolan.org/vlc/", InstallKind.OpenUrl),
+        new SoftwareEntry("VS Code", "微软开源代码编辑器,官方下载页", "https://code.visualstudio.com/", InstallKind.OpenUrl),
+        new SoftwareEntry("Everything", "本地文件搜索工具,官方下载页", "https://www.voidtools.com/", InstallKind.OpenUrl),
+        new SoftwareEntry("PowerToys", "微软系统工具集,官方下载页", "https://learn.microsoft.com/windows/powertoys/", InstallKind.OpenUrl),
+        new SoftwareEntry("PotPlayer", "多媒体播放器,官方下载页", "https://potplayer.daum.net/", InstallKind.OpenUrl),
+
+        // 本地安装:StartAllBack(静默安装,安装包放 %LocalAppData%\NControl\installers\)
+        new SoftwareEntry("StartAllBack", "Win11 开始菜单/任务栏增强,本地静默安装", "startallback.com", InstallKind.SilentInstaller,
+            InstallerFile: "StartAllBack_setup.exe", SilentArgs: "/S"),
+        // 本地安装:GeekUninstaller(便携免安装单 exe,优先 D 盘,不可写自动回退 C 盘 + 桌面快捷方式)
+        new SoftwareEntry("GeekUninstaller", "轻量卸载工具,便携免安装,优先安装到 D 盘(不可写自动回退 C 盘)并创建桌面快捷方式", "geekuninstaller.com", InstallKind.PortableExtract,
+            InstallerFile: "geek.exe", TargetDir: @"D:\Program Files\GeekUninstaller", FallbackDir: @"C:\Program Files\GeekUninstaller", ExeName: "geek.exe")
     };
 
-    /// <summary>打开软件官网(浏览器)。</summary>
+    /// <summary>安装状态文本。</summary>
+    [ObservableProperty]
+    private string installStatusText = "";
+
+    /// <summary>安装进行中。</summary>
+    [ObservableProperty]
+    private bool isInstalling;
+
+    /// <summary>执行软件安装/打开官网。</summary>
     [RelayCommand]
-    private void OpenSoftware(SoftwareEntry entry)
+    private async Task InstallSoftwareAsync(SoftwareEntry entry)
     {
-        if (string.IsNullOrWhiteSpace(entry.Url)) return;
+        if (entry is null || IsInstalling) return;
+        switch (entry.Kind)
+        {
+            case InstallKind.OpenUrl:
+                OpenUrl(entry.Url);
+                break;
+            case InstallKind.SilentInstaller:
+                await SilentInstallAsync(entry);
+                break;
+            case InstallKind.PortableExtract:
+                await PortableInstallAsync(entry);
+                break;
+        }
+    }
+
+    /// <summary>浏览器打开官网。</summary>
+    private void OpenUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
         try
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = entry.Url,
+                FileName = url,
                 UseShellExecute = true
             });
         }
+        catch { }
+    }
+
+    /// <summary>静默安装:在后台运行安装器(安装包位于 %LocalAppData%\NControl\installers\).</summary>
+    private async Task SilentInstallAsync(SoftwareEntry entry)
+    {
+        var installDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "NControl", "installers");
+        var installerPath = Path.Combine(installDir, entry.InstallerFile ?? "");
+        if (!File.Exists(installerPath))
+        {
+            InstallStatusText = $"未找到安装包 {entry.InstallerFile},请先将其放入 {installDir}";
+            return;
+        }
+
+        IsInstalling = true;
+        InstallStatusText = $"正在静默安装 {entry.Name}…";
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = installerPath,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            // 静默参数(如 /S);需管理员时提升
+            if (!string.IsNullOrEmpty(entry.SilentArgs)) psi.Arguments = entry.SilentArgs;
+            var proc = System.Diagnostics.Process.Start(psi);
+            if (proc is not null)
+            {
+                await proc.WaitForExitAsync();
+                InstallStatusText = $"{entry.Name} 安装完成(退出码 {proc.ExitCode})";
+            }
+        }
+        catch (Exception ex)
+        {
+            InstallStatusText = $"{entry.Name} 安装失败:{ex.Message}";
+        }
+        finally
+        {
+            IsInstalling = false;
+        }
+    }
+
+    /// <summary>便携安装:解压 zip 到目标目录 + 创建桌面快捷方式。</summary>
+    private async Task PortableInstallAsync(SoftwareEntry entry)
+    {
+        var installDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "NControl", "installers");
+        var zipPath = Path.Combine(installDir, entry.InstallerFile ?? "");
+        if (!File.Exists(zipPath))
+        {
+            InstallStatusText = $"未找到安装包 {entry.InstallerFile},请先将其放入 {installDir}";
+            return;
+        }
+
+        IsInstalling = true;
+        InstallStatusText = $"正在安装 {entry.Name}…";
+        try
+        {
+            // 1. 目标目录(防呆:优先指定盘,不可写自动回退备用目录)
+            var targetDir = ResolveTargetDir(entry.TargetDir, entry.FallbackDir, entry.Name);
+            Directory.CreateDirectory(targetDir);
+            InstallStatusText = $"正在安装 {entry.Name} 到 {targetDir}…";
+
+            // 2. 安装源:zip 解压 / 单 exe 直接复制
+            var isZip = (entry.InstallerFile ?? "").EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+            if (isZip)
+            {
+                System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, targetDir, overwriteFiles: true);
+            }
+            else
+            {
+                var destPath = Path.Combine(targetDir, Path.GetFileName(entry.InstallerFile!));
+                File.Copy(zipPath, destPath, overwrite: true);
+            }
+
+            // 3. 定位 exe
+            var exePath = Path.Combine(targetDir, entry.ExeName ?? "geek.exe");
+            if (!File.Exists(exePath))
+            {
+                // 可能 zip 里有子目录,搜索
+                var found = Directory.GetFiles(targetDir, entry.ExeName ?? "*.exe", SearchOption.AllDirectories).FirstOrDefault();
+                exePath = found ?? exePath;
+            }
+
+            // 4. 桌面快捷方式
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var lnkPath = Path.Combine(desktop, entry.Name + ".lnk");
+            CreateShortcut(lnkPath, exePath);
+
+            InstallStatusText = $"{entry.Name} 安装完成:{exePath} 已创建桌面快捷方式";
+        }
+        catch (Exception ex)
+        {
+            InstallStatusText = $"{entry.Name} 安装失败:{ex.Message}";
+        }
+        finally
+        {
+            IsInstalling = false;
+        }
+    }
+
+    /// <summary>
+    /// 防呆解析安装目标目录:优先首选目录(如 D 盘),所在盘不可写时回退备用目录(如 C 盘),
+    /// 再失败回退用户 LocalAppData\Programs。
+    /// </summary>
+    private static string ResolveTargetDir(string? preferred, string? fallback, string appName)
+    {
+        var candidates = new List<string?>();
+        if (!string.IsNullOrWhiteSpace(preferred)) candidates.Add(preferred);
+        if (!string.IsNullOrWhiteSpace(fallback)) candidates.Add(fallback);
+        candidates.Add(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs", appName));
+
+        foreach (var dir in candidates.Where(d => !string.IsNullOrWhiteSpace(d)))
+        {
+            if (IsDirWritable(dir!)) return dir!;
+        }
+        // 全部不可写:返回首选(让调用方报错)
+        return preferred ?? fallback ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs", appName);
+    }
+
+    /// <summary>检测目录是否可写:盘为固定磁盘且可创建/写入测试文件。</summary>
+    private static bool IsDirWritable(string dir)
+    {
+        try
+        {
+            // 盘类型检查:固定磁盘(3)才考虑;光盘/网络盘/可移动盘跳过
+            var root = Path.GetPathRoot(dir);
+            if (!string.IsNullOrEmpty(root) && root.Length >= 2 && root[1] == ':')
+            {
+                var drive = System.IO.DriveInfo.GetDrives()
+                    .FirstOrDefault(d => string.Equals(d.RootDirectory.FullName, root, StringComparison.OrdinalIgnoreCase));
+                if (drive is not null && drive.DriveType != System.IO.DriveType.Fixed)
+                    return false;
+            }
+
+            Directory.CreateDirectory(dir);
+            var probe = Path.Combine(dir, $".nctl_write_{Guid.NewGuid():N}.tmp");
+            File.WriteAllText(probe, "test");
+            File.Delete(probe);
+            return true;
+        }
         catch
         {
-            // 打开失败静默(浏览器不可用时)
+            return false;
         }
+    }
+
+    /// <summary>创建 .lnk 快捷方式(COM WScript.Shell)。</summary>
+    private static void CreateShortcut(string lnkPath, string targetPath)
+    {
+        if (!File.Exists(targetPath)) return;
+        var shell = new COMObj();
+        shell.CreateShortcut(lnkPath, targetPath);
     }
 
     [ObservableProperty]
@@ -151,5 +343,44 @@ public partial class AppsViewModel : ObservableObject
     }
 }
 
-/// <summary>软件安装页签条目:软件名 + 说明 + 官方下载地址。</summary>
-public sealed record SoftwareEntry(string Name, string Description, string Url);
+/// <summary>安装类型:官网入口 / 本地静默安装 / 便携解压复制。</summary>
+public enum InstallKind
+{
+    /// <summary>浏览器打开官网下载页。</summary>
+    OpenUrl,
+
+    /// <summary>本地安装器静默安装(后台运行,带静默参数)。</summary>
+    SilentInstaller,
+
+    /// <summary>便携版:解压 zip 到目标目录 + 创建桌面快捷方式。</summary>
+    PortableExtract
+}
+
+/// <summary>软件安装页条目:软件名 + 说明 + 入口(官网地址/本地安装包)。</summary>
+public sealed record SoftwareEntry(
+    string Name,
+    string Description,
+    string Url,
+    InstallKind Kind = InstallKind.OpenUrl,
+    string? InstallerFile = null,
+    string? SilentArgs = null,
+    string? TargetDir = null,
+    string? FallbackDir = null,
+    string? ExeName = null)
+{
+    /// <summary>按钮文本:官网入口显示"打开官网",本地安装显示"安装"。</summary>
+    public string ButtonText => Kind == InstallKind.OpenUrl ? "打开官网" : "安装";
+}
+
+/// <summary>COM 辅助:通过 WScript.Shell 创建 .lnk 快捷方式。</summary>
+internal sealed class COMObj
+{
+    public void CreateShortcut(string lnkPath, string targetPath)
+    {
+        dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!)!;
+        dynamic sc = shell.CreateShortcut(lnkPath);
+        sc.TargetPath = targetPath;
+        sc.WorkingDirectory = Path.GetDirectoryName(targetPath);
+        sc.Save();
+    }
+}

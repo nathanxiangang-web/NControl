@@ -124,6 +124,15 @@ public static class OptimizationFeaturesPerformance
         catalog.Register(F("system.disable-wfpdiag-log", "禁用网络诊断日志", "系统设置",
             "停止收集 WfpDiag 网络诊断日志,减少磁盘写入。", RiskLevel.Safe, true, RestartRequirement.None,
             "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\BFE\\Parameters\\Policy\\Options' -Name 'CollectNetEvents' -Value 0 -Type DWord -Force"));
+        catalog.Register(F("system.vhd-no-expand-on-mount", "VHD 动态磁盘按需扩展", "系统设置",
+            "挂载 VHD/VHDX 动态磁盘时不再一次性扩展到最大容量,改为按需增长,节省磁盘空间。", RiskLevel.Caution, true, RestartRequirement.None,
+            "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\services\\FsDepends\\Parameters' -Name 'VirtualDiskExpandOnMount' -Value 4 -Type DWord -Force"));
+        catalog.Register(F("system.auto-restart-on-bsod", "蓝屏时自动重启", "系统设置",
+            "系统蓝屏(崩溃)后自动重启,便于无人值守场景快速恢复;如需排查蓝屏原因建议关闭。", RiskLevel.Caution, true, RestartRequirement.None,
+            "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\CrashControl' -Name 'AutoReboot' -Value 1 -Type DWord -Force"));
+        catalog.Register(F("system.disable-boot-log-report", "关闭登录成功引导报告", "系统设置",
+            "系统启动后不再写入\"上次登录成功\"引导日志,减少日志写入。", RiskLevel.Safe, true, RestartRequirement.None,
+            "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon' -Name 'ReportBootOk' -Value 0 -Type DWord -Force"));
         catalog.Register(F("ime.default-english", "微软拼音默认英文输入", "系统设置",
             "微软拼音输入法打开时默认为英文模式。", RiskLevel.Safe, false, RestartRequirement.None,
             "Set-ItemProperty -Path 'HKCU:\\SOFTWARE\\Microsoft\\InputMethod\\Settings\\CHS' -Name 'Default Mode' -Value 1 -Type DWord -Force"));

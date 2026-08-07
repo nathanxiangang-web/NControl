@@ -163,3 +163,10 @@
 - [x] 冒烟测试 221 PASS/0 FAIL(新增:值不存在=未优化/服务未禁用=未优化/覆盖率>=80%)
 - [x] UiVerify 提权 UI 自动化验证工具:实测"已优化"徽标渲染 + 已优化项开关自动 On(关闭微软拼音云计算)
 - [x] 提交 03848ac
+
+## 第十三轮 B:预装应用卸载功能收尾(2026-08-07 09:28-09:40,提交 ff709f5)
+- [x] 真机验证(提权):Get-AppxPackage | Remove-AppxPackage 卸载成功;AllUsers 恢复注册成功(仅测试污染清理,产品不做恢复)
+- [x] 验证扫描:提权下 117 包,10 目标包状态准确;UI 真机扫描"检测到 6 个已安装"与本机一致
+- [x] AppsView 提示补充"卸载为单向操作,可从 Microsoft Store 重新安装"(§12.3 如实标注)
+- [x] 冒烟新增 4 条应用模块断言 → 225 PASS/0 FAIL;UiVerify 新增 --apps 模式
+- [x] 经验:Start-Process -Verb RunAs -File 不稳定(偶发退出码1无日志),base64 编码 -Command iex 方式可靠

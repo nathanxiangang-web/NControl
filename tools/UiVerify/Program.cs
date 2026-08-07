@@ -39,6 +39,11 @@ class UiVerify
             RunSoftInstallVerify();
             return;
         }
+        if (args.Length > 0 && args[0] == "--settings2")
+        {
+            RunSettings2Verify();
+            return;
+        }
         var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\NControl.FunctionTest\uiverify.txt", append: false, new UTF8Encoding(true));
         var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
 
@@ -407,5 +412,27 @@ class UiVerify
         keybd_event(0x20, 0, 0, UIntPtr.Zero);
         keybd_event(0x20, 0, 2, UIntPtr.Zero);
         L($"已键盘激活 '{name}'");
+    }
+    static void RunSettings2Verify()
+    {
+        var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\settings2_uiverify.txt", append: false, new UTF8Encoding(true));
+        var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
+        var procs = Process.GetProcessesByName("NControl");
+        Process? target = procs.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
+        if (target is null) { L("FAIL 无主窗口进程"); log.Close(); return; }
+        var root = AutomationElement.FromHandle(target.MainWindowHandle);
+        SetForegroundWindow(target.MainWindowHandle);
+        System.Threading.Thread.Sleep(300);
+
+        KeyActivate(root, "系统设置", L);
+        System.Threading.Thread.Sleep(1500);
+
+        // 检查'全部重新执行'按钮
+        var btn = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "全部重新执行"));
+        L($"'全部重新执行'按钮: {(btn is null ? "未找到" : "找到")}");
+        // 检查'已优化'徽标存在(已优化项只显示标识)
+        var badge = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "已优化"));
+        L($"'已优化'徽标: {(badge is null ? "未找到(本机可能无已优化项)" : "找到")}");
+        log.Close();
     }
 }

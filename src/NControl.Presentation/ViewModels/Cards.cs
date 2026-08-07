@@ -241,14 +241,12 @@ public partial class SettingRowViewModel : ObservableObject
             IsUnsupported = cr.Status == CompatibilityStatus.Unsupported;
         }
 
-        // 状态检测:已优化的项自动处于选中状态,并显示“已优化”标识
+        // 状态检测:已优化的项显示“已优化”标识,但【不自动选中】——避免底部执行栏默认带已优化项导致重复执行
         var detected = StateDetector.Detect(item);
         if (detected == true)
         {
             IsOptimized = true;
             OptimizedText = "已优化";
-            if (!_selection.IsSelected(item))
-                _selection.Add(item);
         }
         else if (detected == false)
         {

@@ -285,6 +285,34 @@ Check(env.BuildNumber > 0 && !string.IsNullOrEmpty(env.Architecture) && !string.
 compatEngine.ClearCache();
 Check(true, "兼容性:引擎缓存清除正常", "");
 
+// ---------- 系统设置页逻辑断言(已优化不自动选中 + 全部重新执行) ----------
+try
+{
+    var sel = new NControl.Presentation.Services.SelectionService();
+    var nav = new NControl.Presentation.Services.NavigationService();
+    var sysVm = new NControl.Presentation.ViewModels.SystemSettingsViewModel(catalog, sel, nav, compatEngine);
+    // 1. 已优化项不自动加入选择队列(构造 SettingRowViewModel 后 Selection 应为空)
+    var optimizedItem = catalog.Find("explorer.open-this-pc");
+    if (optimizedItem is not null && StateDetector.Detect(optimizedItem) == true)
+    {
+        _ = new NControl.Presentation.ViewModels.SettingRowViewModel(optimizedItem, sel, nav, compatEngine);
+        Check(!sel.IsSelected(optimizedItem), "系统设置:已优化项不自动选中(避免重复执行)", "");
+    }
+    else
+    {
+        Check(true, "系统设置:当前环境无已优化样本项(跳过自动选中断言)", "");
+    }
+    // 2. 全部重新执行命令:把当前分类所有项加入选择队列
+    var allCount = catalog.ByModule(ModuleKind.Optimization).Count(f => f.Risk != RiskLevel.HighRisk);
+    sysVm.SelectAllForReapplyCommand.Execute(null);
+    Check(sel.Count == allCount, "系统设置:全部重新执行把当前视图所有项加入队列", $"{sel.Count}/{allCount}");
+    Check(sysVm.ReapplyStatusText.Contains("已加入"), "系统设置:全部重新执行状态提示", sysVm.ReapplyStatusText);
+}
+catch (Exception ex)
+{
+    Check(false, "系统设置页逻辑断言异常", ex.Message);
+}
+
 // ---------- 配置系统断言(第二代 §5-§6) ----------
 var planDir = Path.Combine(Path.GetTempPath(), "nctl_plan_test_" + Guid.NewGuid().ToString("N"));
 var planPaths = new NControl.Infrastructure.AppPaths(new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>

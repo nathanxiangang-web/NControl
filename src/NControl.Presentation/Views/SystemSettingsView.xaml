@@ -5,26 +5,39 @@
              xmlns:ctrl="clr-namespace:NControl.Presentation.Controls">
     <StackPanel>
         <TextBlock FontSize="20" FontWeight="SemiBold" Text="系统设置" />
-        <TextBlock Text="开关选中表示“选择应用”;系统已处于优化状态的项会自动选中并显示“已优化”标识,底部确认后统一执行。" Style="{StaticResource MutedText}" Margin="0,4,0,14" TextWrapping="Wrap" />
+        <TextBlock Text="开关选中表示“选择应用”;已优化的项会显示“已优化”标识但不自动选中,避免重复执行。如需全部重跑一遍,点击“全部重新执行”。" Style="{StaticResource MutedText}" Margin="0,4,0,14" TextWrapping="Wrap" />
 
-        <!-- 分类标签 -->
-        <ItemsControl ItemsSource="{Binding Chips}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <ToggleButton Style="{StaticResource Chip}" Margin="0,0,8,8"
-                                  IsChecked="{Binding IsActive, Mode=TwoWay}"
-                                  Command="{Binding DataContext.SelectChipCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  CommandParameter="{Binding}">
-                        <TextBlock Text="{Binding Title}" />
-                    </ToggleButton>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <!-- 分类标签 + 全部重新执行 -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ItemsControl Grid.Column="0" ItemsSource="{Binding Chips}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ToggleButton Style="{StaticResource Chip}" Margin="0,0,8,8"
+                                      IsChecked="{Binding IsActive, Mode=TwoWay}"
+                                      Command="{Binding DataContext.SelectChipCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      CommandParameter="{Binding}">
+                            <TextBlock Text="{Binding Title}" />
+                        </ToggleButton>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Grid.Column="1" Content="全部重新执行" Style="{StaticResource SecondaryButton}" Height="30"
+                    Margin="8,0,0,8" VerticalAlignment="Top"
+                    Command="{Binding SelectAllForReapplyCommand}"
+                    ToolTip="把当前分类的所有项(含已优化的)加入选择队列,底部确认后统一重新执行一遍" />
+        </Grid>
+        <TextBlock Text="{Binding ReapplyStatusText}" Style="{StaticResource SubtleText}" Margin="0,2,0,6" TextWrapping="Wrap"
+                   Foreground="{StaticResource PrimaryBrush}"
+                   Visibility="{Binding ReapplyStatusText, Converter={x:Static conv:StringNotEmptyToVisibilityConverter.Instance}}" />
 
         <!-- 设置分组 -->
         <ItemsControl ItemsSource="{Binding Groups}">

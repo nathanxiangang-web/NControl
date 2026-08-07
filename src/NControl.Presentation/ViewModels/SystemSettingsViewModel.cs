@@ -48,6 +48,30 @@ public partial class SystemSettingsViewModel : ObservableObject
         Rebuild();
     }
 
+    /// <summary>
+    /// 全部重新执行:把当前分类视图中的所有项(含已优化的)加入选择队列,底部确认后统一重新执行。
+    /// "全部"视图=全部非高风险项;选中具体分类=该分类全部项(含高风险)。
+    /// </summary>
+    [RelayCommand]
+    private void SelectAllForReapply()
+    {
+        var items = _catalog.ByModule(ModuleKind.Optimization)
+            .Where(f => SelectedCategory == "全部"
+                ? f.Risk != RiskLevel.HighRisk
+                : f.Category == SelectedCategory)
+            .ToArray();
+        if (items.Length == 0)
+        {
+            ReapplyStatusText = "当前分类下没有可执行项";
+            return;
+        }
+        _selection.AddRange(items);
+        ReapplyStatusText = $"已加入 {items.Length} 项(含已优化的)到选择队列,底部确认后统一重新执行";
+    }
+
+    [ObservableProperty]
+    private string reapplyStatusText = "";
+
     public void ApplyCategory(string category)
     {
         var chip = Chips.FirstOrDefault(c => c.Title == category);

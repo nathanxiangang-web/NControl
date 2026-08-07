@@ -149,7 +149,8 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
                 "start.disable-recommendations", "privacy.disable-ads-id",
                 "privacy.disable-lock-screen-tips", "explorer.show-extensions",
                 "performance.disable-transparency",
-                "explorer.notepad-wrap", "taskbar.clock-show-seconds", "explorer.quick-access-no-recent"
+                "explorer.notepad-wrap", "taskbar.clock-show-seconds", "explorer.quick-access-no-recent",
+                "explorer.titlebar-full-path", "privacy.enable-clipboard-history"
             }
         });
 
@@ -167,6 +168,7 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
                 "start.disable-recommendations", "privacy.disable-ads-id",
                 "privacy.disable-lock-screen-tips", "explorer.show-extensions",
                 "performance.disable-transparency",
+                "explorer.titlebar-full-path", "privacy.enable-clipboard-history",
                 // 追加
                 "taskbar.hide-chat", "taskbar.hide-taskview", "taskbar.align-left",
                 "explorer.open-this-pc", "explorer.show-hidden",
@@ -201,6 +203,7 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
                 "explorer.open-this-pc", "explorer.show-hidden",
                 "privacy.disable-settings-suggestions", "privacy.disable-tailored-experiences",
                 "privacy.disable-welcome-experience", "gaming.disable-game-dvr", "gaming.disable-game-bar",
+                "explorer.titlebar-full-path", "privacy.enable-clipboard-history",
                 // 谨慎追加
                 "explorer.classic-context-menu", "performance.disable-animations",
                 "performance.high-performance-plan", "update.disable-driver-updates",
@@ -223,7 +226,10 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
                 "edge.hide-first-run", "edge.disable-startup-boost", "edge.hide-top-sites",
                 "edge.hide-sidebar", "edge.no-diagnostic-data", "edge.disable-personalized-ads",
                 "privacy.disable-telemetry", "privacy.disable-location",
-                "privacy.disable-sms-router", "privacy.deny-file-system-access"
+                "privacy.disable-sms-router", "privacy.deny-file-system-access",
+                // ZyperWin++ 适配补充(谨慎级,第二批对齐)
+                "perf.svchost-split-threshold", "perf.large-system-cache",
+                "perf.disable-paging-executive", "perf.io-page-lock-limit", "perf.cpu-priority-optimize"
             }
         });
     }

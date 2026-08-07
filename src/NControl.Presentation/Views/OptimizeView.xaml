@@ -27,6 +27,9 @@
                                 </StackPanel>
                                 <TextBlock Text="{Binding Description}" Style="{StaticResource MutedText}" Margin="0,6,0,0" />
                                 <TextBlock Text="{Binding CountText}" Style="{StaticResource SubtleText}" Margin="0,8,0,0" />
+                                <TextBlock Text="{Binding CompatText}" Foreground="{StaticResource WarningBrush}" FontSize="12"
+                                           Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Visibility="{Binding CompatText, Converter={x:Static conv:StringNotEmptyToVisibilityConverter.Instance}}" />
                                 <Expander IsExpanded="{Binding IsExpanded}" Margin="0,8,0,0">
                                     <Expander.Header>
                                         <TextBlock Text="查看具体项目" Foreground="{StaticResource PrimaryBrush}" FontSize="12" FontWeight="SemiBold" />

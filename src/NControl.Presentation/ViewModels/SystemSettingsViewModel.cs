@@ -17,11 +17,14 @@ public partial class SystemSettingsViewModel : ObservableObject
     private readonly IFunctionCatalog _catalog;
     private readonly SelectionService _selection;
     private readonly NavigationService _nav;
+    private readonly CompatibilityEngine _compat;
 
-    public SystemSettingsViewModel(IFunctionCatalog catalog, SelectionService selection, NavigationService nav)
+    public SystemSettingsViewModel(IFunctionCatalog catalog, SelectionService selection, NavigationService nav,
+        CompatibilityEngine? compat = null)
     {
         _catalog = catalog;
         _selection = selection;
+        _compat = compat ?? new CompatibilityEngine(new Infrastructure.WindowsEnvironmentProbe());
 
         Chips.Add(new ChipItem("全部", true));
         foreach (var category in catalog.ByModule(ModuleKind.Optimization).Select(f => f.Category).Distinct())
@@ -68,6 +71,6 @@ public partial class SystemSettingsViewModel : ObservableObject
         foreach (var group in items.GroupBy(f => f.Category))
             Groups.Add(new SettingGroupViewModel(
                 group.Key,
-                group.Select(f => new SettingRowViewModel(f, _selection, _nav))));
+                group.Select(f => new SettingRowViewModel(f, _selection, _nav, _compat))));
     }
 }

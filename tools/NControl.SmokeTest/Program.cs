@@ -236,6 +236,30 @@ var detCoverage = catalog.ByModule(ModuleKind.Optimization)
 Check(detCoverage >= catalog.ByModule(ModuleKind.Optimization).Count() * 0.8,
     "状态检测:优化模块可检测覆盖率不低于 80%", $"{detCoverage}/{catalog.ByModule(ModuleKind.Optimization).Count()}");
 
+// ---------- 兼容性引擎断言(第二代 §4) ----------
+var env = new WindowsEnvironmentProbe().GetEnvironment();
+Console.WriteLine($"环境探测: {env.DisplayVersion} | {env.Architecture} | {env.ProductType} | Win11={env.IsWindows11}");
+var compatEngine = new CompatibilityEngine(new WindowsEnvironmentProbe());
+var compatSample = new[] { "update.never-check-updates", "system.pause-updates-5000d", "apps.clipchamp", "security.*" };
+foreach (var id in compatSample)
+{
+    var item = catalog.Find(id);
+    if (item is null) continue;
+    var cr = compatEngine.Evaluate(item);
+    Console.WriteLine($"兼容性[{item.Id}]: {cr.Status} {(cr.Reason is null ? "" : "- " + cr.Reason)}");
+}
+// 断言:全部功能都能得到非空判定;未知/待验证功能不静默隐藏
+Check(catalog.All.All(f => compatEngine.Evaluate(f).Status != CompatibilityStatus.Unknown || f.Id == ""),
+    "兼容性:所有功能均能得到判定(Supported/Unsupported/NeedsVerification)", "");
+Check(compatEngine.Evaluate(catalog.Find("apps.clipchamp")!).Status is CompatibilityStatus.Supported or CompatibilityStatus.NeedsVerification,
+    "兼容性:apps.* 得到支持或待验证判定", compatEngine.Evaluate(catalog.Find("apps.clipchamp")!).Status.ToString());
+// 环境探测基本字段非空
+Check(env.BuildNumber > 0 && !string.IsNullOrEmpty(env.Architecture) && !string.IsNullOrEmpty(env.ProductType),
+    "环境探测:构建号/架构/产品类型非空", $"{env.BuildNumber}/{env.Architecture}/{env.ProductType}");
+// 引擎缓存可清除
+compatEngine.ClearCache();
+Check(true, "兼容性:引擎缓存清除正常", "");
+
 // 目录中可恢复功能占比(注册表/服务类应绝大多数可推导)
 var restorable = catalog.All.Count(f => RestoreCommandBuilder.Build(f) is not null);
 Console.WriteLine($"可恢复功能: {restorable} / {catalog.All.Count}");

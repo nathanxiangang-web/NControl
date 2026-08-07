@@ -73,6 +73,8 @@ public partial class App : Application
         builder.Services.AddSingleton<IExecutionProvider, PowerShellExecutionProvider>();
         builder.Services.AddSingleton<IExecutionProvider, CommandExecutionProvider>();
         builder.Services.AddSingleton<IExecutionCenter, ExecutionCenter>();
+builder.Services.AddSingleton<IEnvironmentProbe, WindowsEnvironmentProbe>();
+builder.Services.AddSingleton<CompatibilityEngine>();
 
         // 业务模块
         builder.Services.AddSingleton<IModuleRegistrar, OptimizationModuleRegistrar>();

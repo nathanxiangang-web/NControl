@@ -11,12 +11,16 @@ namespace NControl.Presentation.ViewModels;
 /// </summary>
 public partial class CleanupViewModel : ObservableObject
 {
-    public CleanupViewModel(IFunctionCatalog catalog, SelectionService selection, NavigationService nav)
+    private readonly CompatibilityEngine _compat;
+
+    public CleanupViewModel(IFunctionCatalog catalog, SelectionService selection, NavigationService nav,
+        CompatibilityEngine? compat = null)
     {
+        _compat = compat ?? new CompatibilityEngine(new Infrastructure.WindowsEnvironmentProbe());
         foreach (var group in catalog.ByModule(ModuleKind.Cleanup).GroupBy(f => f.Category))
             Groups.Add(new SettingGroupViewModel(
                 group.Key,
-                group.Select(f => new SettingRowViewModel(f, selection, nav))));
+                group.Select(f => new SettingRowViewModel(f, selection, nav, _compat))));
     }
 
     public ObservableCollection<SettingGroupViewModel> Groups { get; } = new();

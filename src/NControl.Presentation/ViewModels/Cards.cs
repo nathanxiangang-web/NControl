@@ -124,7 +124,8 @@ public partial class PresetCardViewModel : ObservableObject
 {
     private readonly SelectionService _selection;
 
-    public PresetCardViewModel(Preset preset, IFunctionCatalog catalog, SelectionService selection)
+    public PresetCardViewModel(Preset preset, IFunctionCatalog catalog, SelectionService selection,
+        CompatibilityEngine? compat = null)
     {
         Preset = preset;
         _selection = selection;
@@ -147,6 +148,23 @@ public partial class PresetCardViewModel : ObservableObject
             features.Select(f => new PresetFeatureRowViewModel(f, selection)));
         CountText = $"包含 {Features.Count} 个项目";
         HasMissing = preset.FeatureIds.Count != Features.Count;
+
+        // 兼容性统计(第二代 §4):预设中不兼容/待验证/未知项数量
+        if (compat is not null && features.Length > 0)
+        {
+            var results = features.Select(compat.Evaluate).ToArray();
+            UnsupportedCount = results.Count(r => r.Status == CompatibilityStatus.Unsupported);
+            NeedsVerificationCount = results.Count(r => r.Status == CompatibilityStatus.NeedsVerification);
+            UnknownCount = results.Count(r => r.Status == CompatibilityStatus.Unknown);
+            if (UnsupportedCount > 0 || UnknownCount > 0 || NeedsVerificationCount > 0)
+            {
+                var parts = new List<string>();
+                if (UnsupportedCount > 0) parts.Add($"{UnsupportedCount} 项不兼容");
+                if (UnknownCount > 0) parts.Add($"{UnknownCount} 项兼容性未知");
+                if (NeedsVerificationCount > 0) parts.Add($"{NeedsVerificationCount} 项待验证");
+                CompatText = "⚠ " + string.Join(" · ", parts);
+            }
+        }
     }
 
     public Preset Preset { get; }
@@ -155,6 +173,18 @@ public partial class PresetCardViewModel : ObservableObject
     public string TargetGroup { get; }
     public string CountText { get; }
     public bool HasMissing { get; }
+
+    /// <summary>兼容性统计文本(第二代 §4):不兼容/未知/待验证数量。</summary>
+    public string CompatText { get; } = "";
+
+    /// <summary>不兼容项数量。</summary>
+    public int UnsupportedCount { get; }
+
+    /// <summary>待验证项数量。</summary>
+    public int NeedsVerificationCount { get; }
+
+    /// <summary>兼容性未知项数量。</summary>
+    public int UnknownCount { get; }
     public Brush PillBrush { get; }
     public Brush PillForeground { get; }
     public System.Collections.ObjectModel.ObservableCollection<PresetFeatureRowViewModel> Features { get; }
@@ -179,7 +209,8 @@ public partial class SettingRowViewModel : ObservableObject
     private readonly SelectionService _selection;
     private readonly NavigationService _nav;
 
-    public SettingRowViewModel(FunctionItem item, SelectionService selection, NavigationService nav)
+    public SettingRowViewModel(FunctionItem item, SelectionService selection, NavigationService nav,
+        CompatibilityEngine? compat = null)
     {
         Item = item;
         _selection = selection;
@@ -192,6 +223,23 @@ public partial class SettingRowViewModel : ObservableObject
         IsHighRisk = item.Risk == RiskLevel.HighRisk;
         RestoreCommandText = RestoreCommandBuilder.Build(item);
         CanRestore = !string.IsNullOrWhiteSpace(RestoreCommandText);
+
+        // 兼容性判定(第二代 §4):不兼容项显示原因
+        if (compat is not null)
+        {
+            var cr = compat.Evaluate(item);
+            CompatStatus = cr.Status;
+            CompatText = cr.Status switch
+            {
+                CompatibilityStatus.Supported => "",
+                CompatibilityStatus.Unsupported => "不兼容",
+                CompatibilityStatus.Unknown => "兼容性未知",
+                CompatibilityStatus.NeedsVerification => "待验证",
+                _ => ""
+            };
+            CompatReason = cr.Reason;
+            IsUnsupported = cr.Status == CompatibilityStatus.Unsupported;
+        }
 
         // 状态检测:已优化的项自动处于选中状态,并显示“已优化”标识
         var detected = StateDetector.Detect(item);
@@ -211,6 +259,18 @@ public partial class SettingRowViewModel : ObservableObject
             OptimizedText = "状态未知";
         }
     }
+
+    /// <summary>兼容性状态(第二代 §4)。</summary>
+    public CompatibilityStatus CompatStatus { get; }
+
+    /// <summary>兼容性徽标文本(Supported 显示为空)。</summary>
+    public string CompatText { get; } = "";
+
+    /// <summary>兼容性原因说明。</summary>
+    public string? CompatReason { get; }
+
+    /// <summary>是否不兼容(禁止执行)。</summary>
+    public bool IsUnsupported { get; }
 
     public FunctionItem Item { get; }
     public string Name => Item.Name;

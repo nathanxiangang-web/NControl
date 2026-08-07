@@ -9,10 +9,12 @@ namespace NControl.Presentation.ViewModels;
 /// <summary>一键优化页:方案卡片 + 自定义分类(产品文档 §6.2)。深度优化不作为默认选项。</summary>
 public partial class OptimizeViewModel : ObservableObject
 {
-    public OptimizeViewModel(IFunctionCatalog catalog, SelectionService selection, NavigationService nav)
+    public OptimizeViewModel(IFunctionCatalog catalog, SelectionService selection, NavigationService nav,
+        CompatibilityEngine? compat = null)
     {
+        compat ??= new CompatibilityEngine(new Infrastructure.WindowsEnvironmentProbe());
         foreach (var preset in catalog.Presets.Where(p => !p.Id.StartsWith("preset.apps.")))
-            Presets.Add(new PresetCardViewModel(preset, catalog, selection));
+            Presets.Add(new PresetCardViewModel(preset, catalog, selection, compat));
 
         foreach (var group in catalog.ByModule(ModuleKind.Optimization)
                      .GroupBy(f => f.Category))

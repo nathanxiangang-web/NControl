@@ -70,6 +70,9 @@ public static class OptimizationFeaturesExplorer
         catalog.Register(F("explorer.remove-duplicate-drives", "去除“本地磁盘”重复显示", "系统设置",
             "移除资源管理器中重复显示的“本地磁盘”条目;仅当出现重复显示时使用。", RiskLevel.Caution, true, RestartRequirement.ExplorerRestart,
             "Remove-Item -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Desktop\\NameSpace\\DelegateFolders\\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}' -Recurse -Force -ErrorAction SilentlyContinue"));
+        catalog.Register(F("explorer.titlebar-full-path", "标题栏显示完整路径", "资源管理器",
+            "资源管理器窗口标题栏显示当前文件夹的完整路径,方便复制与辨识。", RiskLevel.Safe, false, RestartRequirement.ExplorerRestart,
+            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CabinetState' -Name 'FullPath' -Value 1 -Type DWord -Force"));
     }
 
     private static FunctionItem F(

@@ -96,6 +96,26 @@ public static class OptimizationFeaturesPerformance
             "系统搜索不再请求必应和网络内容,仅搜索本地;可减少联网与延迟。", RiskLevel.Recommended, true, RestartRequirement.None,
             "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'BingSearchEnabled' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'DisableWebSearch' -Value 1 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'ConnectedSearchUseWeb' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'ConnectedSearchUseWebOverMeteredConnections' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'AllowCloudSearch' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'AllowCortanaAboveLock' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'AlwaysUseAutoLangDetection' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'AllowIndexingEncryptedStoresOrItems' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'AllowCortana' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search' -Name 'AllowSearchToUseLocation' -Value 0 -Type DWord -Force"));
 
+        // ===== ZyperWin++ 性能补充(2026-08-02 数据)=====
+        catalog.Register(F("perf.svchost-split-threshold", "优化进程数量", "性能与电源",
+            "提高服务进程合并阈值,让更多系统服务共用进程,减少进程数量与内存占用。", RiskLevel.Caution, true, RestartRequirement.Reboot,
+            "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control' -Name 'SvcHostSplitThresholdInKB' -Value 4294967295 -Type DWord -Force"));
+        catalog.Register(F("perf.large-system-cache", "启用大系统缓存", "性能与电源",
+            "让系统使用更多内存作为文件缓存;内存较小的机器可能挤压应用可用内存。", RiskLevel.Caution, true, RestartRequirement.Reboot,
+            "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management' -Name 'LargeSystemCache' -Value 1 -Type DWord -Force"));
+        catalog.Register(F("perf.disable-paging-executive", "内核与驱动常驻内存", "性能与电源",
+            "禁止系统内核与驱动程序分页到硬盘,减少磁盘 I/O;内存不足时可能导致系统不稳定。", RiskLevel.Caution, true, RestartRequirement.Reboot,
+            "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management' -Name 'DisablePagingExecutive' -Value 1 -Type DWord -Force"));
+        catalog.Register(F("perf.io-page-lock-limit", "增加文件系统缓存上限", "性能与电源",
+            "提高文件系统可锁定的 IO 页数上限,大文件读写更流畅;会占用更多内存。", RiskLevel.Caution, true, RestartRequirement.Reboot,
+            "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management' -Name 'IoPageLockLimit' -Value 10000000 -Type DWord -Force"));
+        catalog.Register(F("perf.cpu-priority-optimize", "优化处理器优先级", "性能与电源",
+            "调整前台进程优先级与关键设备中断优先级,提升前台响应;部分硬件组合下可能异常。", RiskLevel.Caution, true, RestartRequirement.None,
+            "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl' -Name 'Win32PrioritySeparation' -Value 38 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl' -Name 'IRQ8Priority' -Value 1 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl' -Name 'IRQ16Priority' -Value 2 -Type DWord -Force"));
+        catalog.Register(F("perf.disable-prefetch", "关闭预读与超级预读", "性能与电源",
+            "关闭 Prefetch/Superfetch 预读,减少启动与后台磁盘预读开销;机械硬盘上可能变慢。", RiskLevel.Experimental, true, RestartRequirement.Reboot,
+            "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters' -Name 'EnablePrefetcher' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters' -Name 'EnableSuperfetch' -Value 0 -Type DWord -Force"));
+
         // ===== 系统设置 =====
         catalog.Register(F("system.disable-hibernation", "关闭休眠", "系统设置",
             "关闭休眠与快速启动(删除休眠文件,释放与内存等大的磁盘空间);合盖/睡眠行为不变。", RiskLevel.Caution, true, RestartRequirement.Reboot,

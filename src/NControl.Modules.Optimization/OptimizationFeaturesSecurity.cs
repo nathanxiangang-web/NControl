@@ -43,6 +43,14 @@ public static class OptimizationFeaturesSecurity
             "系统不再自动检查任何更新;将长期缺少安全补丁,仅建议在离线或隔离环境使用。",
             RiskLevel.HighRisk, true, RestartRequirement.None,
             "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update' -Name 'AUOptions' -Value 1 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update' -Name 'CachedAUOptions' -Value 1 -Type DWord -Force"));
+        catalog.Register(F("advanced.disable-tsx", "关闭 TSX 漏洞补丁", "高级",
+            "禁用 Intel TSX 指令集相关漏洞补丁,部分应用性能可能提升;降低对 TSX 侧信道攻击的防护。",
+            RiskLevel.HighRisk, true, RestartRequirement.Reboot,
+            "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Kernel' -Name 'DisableTsx' -Value 1 -Type DWord -Force"));
+        catalog.Register(F("advanced.disable-insecure-download-warnings", "关闭不安全下载警告", "高级",
+            "浏览器下载非 HTTPS 或来源不明文件时不再显示警告;降低对不安全下载的提醒。",
+            RiskLevel.HighRisk, true, RestartRequirement.None,
+            "Set-ItemProperty -Path 'HKCU:\\Software\\Policies\\Microsoft\\Edge' -Name 'ShowDownloadsInsecureWarningsEnabled' -Value 0 -Type DWord -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'ShowDownloadsInsecureWarningsEnabled' -Value 0 -Type DWord -Force"));
     }
 
     private static FunctionItem F(

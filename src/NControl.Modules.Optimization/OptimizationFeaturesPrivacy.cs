@@ -76,6 +76,9 @@ public static class OptimizationFeaturesPrivacy
         catalog.Register(F("privacy.disable-step-recorder", "禁用步骤记录器", "隐私与广告",
             "关闭问题步骤记录器与问题报告数据收集。", RiskLevel.Safe, false, RestartRequirement.None,
             "Set-ItemProperty -Path 'HKCU:\\Software\\Policies\\Microsoft\\Windows\\ProblemReports' -Name 'DisableProblemReports' -Value 1 -Type DWord -Force"));
+        catalog.Register(F("privacy.enable-clipboard-history", "启用剪贴板历史记录", "隐私与广告",
+            "启用剪贴板历史(Win+V),可查看最近复制的内容;剪贴板内容将保存在本机。", RiskLevel.Safe, false, RestartRequirement.None,
+            "Set-ItemProperty -Path 'HKCU:\\SOFTWARE\\Microsoft\\Clipboard' -Name 'EnableClipboardHistory' -Value 1 -Type DWord -Force"));
     }
 
     private static FunctionItem F(

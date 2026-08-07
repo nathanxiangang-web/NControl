@@ -243,20 +243,6 @@ public static class OptimizationFeaturesPerformance
             "按需开启：省 CPU 资源和减少低微卡顿", RiskLevel.Caution, true, RestartRequirement.None,
             "Disable-MMAgent -MemoryCompression -ErrorAction SilentlyContinue"));
 
-        // ===== 第一代自研扩展(不在 ZyperWin 文档中,保留)=====
-        catalog.Register(F("performance.ultimate-performance-plan", "启用卓越性能电源计划", "性能优化设置",
-            "启用并切换到卓越性能计划;效果依赖硬件与系统版本,验证不足(自研扩展)。", RiskLevel.Experimental, true, RestartRequirement.None,
-            "& 'C:\\WINDOWS\\System32\\powercfg.exe' -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null; & 'C:\\WINDOWS\\System32\\powercfg.exe' /setactive e9a42b02-d5df-448d-aa00-03f14749eb61"));
-        catalog.Register(F("performance.disable-transparency", "关闭窗口透明效果", "性能优化设置",
-            "关闭任务栏和部分界面的透明效果,界面更直接(自研扩展)。", RiskLevel.Safe, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name 'EnableTransparency' -Value 0 -Type DWord -Force"));
-        catalog.Register(F("gaming.disable-game-bar", "禁用游戏栏", "性能优化设置",
-            "禁用 Win+G 游戏栏入口(不影响游戏本身运行)(自研扩展)。", RiskLevel.Safe, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameBar' -Name 'UseNexusForGameBarEnabled' -Value 0 -Type DWord -Force"));
-        catalog.Register(F("gaming.disable-game-mode", "关闭游戏模式", "性能优化设置",
-            "关闭游戏模式;可能影响部分游戏的资源调度,仅建议特定场景使用(自研扩展)。", RiskLevel.Caution, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\GameBar' -Name 'AutoGameModeEnabled' -Value 0 -Type DWord -Force"));
-
         // ================= 文档:系统设置(16 项)=================
 
         // 1、关闭休眠
@@ -334,11 +320,6 @@ public static class OptimizationFeaturesPerformance
             "按需开启：恢复旧右键菜单，操作更直接", RiskLevel.Safe, false, RestartRequirement.ExplorerRestart,
             "New-Item -Path 'HKCU:\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32' -Force | Out-Null; Set-ItemProperty -Path 'HKCU:\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32' -Name '(Default)' -Value '' -Type String -Force; Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue"));
 
-        // 16、Win停止更新5000天
-        catalog.Register(F("system.pause-updates-5000d", "Win停止更新5000天", "系统设置",
-            "按需开启：延迟系统更新10年", RiskLevel.HighRisk, true, RestartRequirement.None,
-            "$s=[DateTime]::Now; $e=$s.AddDays(5000); Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'FlightSettingsMaxPauseDays' -Value '7152' -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesStartTime' -Value $s.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesEndTime' -Value $e.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseQualityUpdatesStartTime' -Value $s.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseQualityUpdatesEndTime' -Value $e.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseUpdatesStartTime' -Value $s.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseUpdatesExpiryTime' -Value $e.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force"));
-
         // ================= 文档:更新设置(7 项)=================
 
         // 1、自动安装无需重启的更新
@@ -376,16 +357,10 @@ public static class OptimizationFeaturesPerformance
             "建议开启：去除新版记事本升级提示", RiskLevel.Recommended, false, RestartRequirement.None,
             "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Notepad' -Name 'ShowStoreBanner' -Value 0 -Type DWord -Force"));
 
-        // ===== 第一代自研扩展(不在 ZyperWin 文档中,保留)=====
-        catalog.Register(F("update.disable-delivery-optimization", "关闭传递优化", "更新设置",
-            "停止从其他电脑下载更新和向其他电脑上传更新(自研扩展)。", RiskLevel.Caution, true, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DeliveryOptimization\\Config' -Name 'DODownloadMode' -Value 0 -Type DWord -Force"));
-        catalog.Register(F("update.set-active-hours", "设置主动时间段(9:00-18:00)", "更新设置",
-            "系统在该时间段内不自动重启以安装更新(自研扩展)。", RiskLevel.Safe, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Update\\Settings' -Name 'ActiveHoursStart' -Value 540 -Type DWord -Force; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Update\\Settings' -Name 'ActiveHoursEnd' -Value 1080 -Type DWord -Force"));
-        catalog.Register(F("update.pause-feature-updates-7d", "暂停功能更新 7 天", "更新设置",
-            "将功能更新暂停 7 天,期间不会安装新的功能更新(自研扩展)。", RiskLevel.Caution, true, RestartRequirement.None,
-            "$s=[DateTime]::Now; $e=$s.AddDays(7); Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesStartTime' -Value $s.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesEndTime' -Value $e.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force"));
+        // 8、Win停止更新5000天(自系统设置移入)
+        catalog.Register(F("system.pause-updates-5000d", "Win停止更新5000天", "更新设置",
+            "按需开启：延迟系统更新10年", RiskLevel.HighRisk, true, RestartRequirement.None,
+            "$s=[DateTime]::Now; $e=$s.AddDays(5000); Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'FlightSettingsMaxPauseDays' -Value '7152' -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesStartTime' -Value $s.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseFeatureUpdatesEndTime' -Value $e.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseQualityUpdatesStartTime' -Value $s.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseQualityUpdatesEndTime' -Value $e.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseUpdatesStartTime' -Value $s.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings' -Name 'PauseUpdatesExpiryTime' -Value $e.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type String -Force"));
 
         // ================= 文档:Edge优化设置(12 项)=================
 

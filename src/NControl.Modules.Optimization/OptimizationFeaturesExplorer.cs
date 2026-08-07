@@ -5,7 +5,6 @@ namespace NControl.Modules.Optimization;
 /// <summary>
 /// 外观/资源管理器功能:与《ZyperWin++ 当前功能统计表》(ZyperData.xml, 2026-08-02)逐项对齐。
 /// 名称/说明/分类均采用文档原文;实现参考 ZyperWin++ 4.2 源码的注册表操作。
-/// 末尾保留第一代自研扩展(不在文档中的任务栏补充项)。
 /// </summary>
 public static class OptimizationFeaturesExplorer
 {
@@ -157,26 +156,6 @@ public static class OptimizationFeaturesExplorer
         catalog.Register(F("explorer.remove-duplicate-drives", "去除本地磁盘重复显示", "外观/资源管理器",
             "建议开启：消除导航栏中磁盘重复显示", RiskLevel.Caution, true, RestartRequirement.ExplorerRestart,
             "Remove-Item -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Desktop\\NameSpace\\DelegateFolders\\{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}' -Recurse -Force -ErrorAction SilentlyContinue"));
-
-        // ===== 第一代自研扩展(不在 ZyperWin 文档中,保留)=====
-        catalog.Register(F("taskbar.hide-widgets", "隐藏小组件按钮", "外观/资源管理器",
-            "隐藏任务栏上的天气/小组件入口(自研扩展)。", RiskLevel.Safe, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'TaskbarDa' -Value 0 -Type DWord -Force"));
-        catalog.Register(F("taskbar.hide-chat", "隐藏聊天(Teams)按钮", "外观/资源管理器",
-            "隐藏任务栏上的聊天/Teams 入口(自研扩展)。", RiskLevel.Safe, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'TaskbarMn' -Value 0 -Type DWord -Force"));
-        catalog.Register(F("taskbar.hide-copilot", "隐藏 Copilot 按钮", "外观/资源管理器",
-            "隐藏任务栏上的 Copilot 入口按钮(自研扩展)。", RiskLevel.Safe, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'ShowCopilotButton' -Value 0 -Type DWord -Force"));
-        catalog.Register(F("taskbar.align-left", "任务栏图标左对齐", "外观/资源管理器",
-            "将任务栏图标从居中改为左对齐,接近 Windows 10 习惯(自研扩展)。", RiskLevel.Safe, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'TaskbarAl' -Value 0 -Type DWord -Force"));
-        catalog.Register(F("taskbar.clock-show-seconds", "任务栏时钟显示秒数", "外观/资源管理器",
-            "任务栏右下角时钟显示秒;需要较新的 Windows 11 版本(自研扩展)。", RiskLevel.Safe, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'ShowSecondsInSystemClock' -Value 1 -Type DWord -Force"));
-        catalog.Register(F("explorer.show-hidden", "显示隐藏文件", "外观/资源管理器",
-            "在资源管理器中显示隐藏文件和文件夹(自研扩展)。", RiskLevel.Recommended, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'Hidden' -Value 1 -Type DWord -Force"));
     }
 
     private static FunctionItem F(

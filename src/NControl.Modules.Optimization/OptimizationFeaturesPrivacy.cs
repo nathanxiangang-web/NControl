@@ -182,11 +182,6 @@ public static class OptimizationFeaturesPrivacy
         catalog.Register(F("privacy.disable-debug-print", "禁用写入调试信息", "隐私设置",
             "按需开启：减少磁盘占用，不利于蓝屏排错", RiskLevel.Safe, true, RestartRequirement.None,
             "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Debug Print Filter' -Name 'DEFAULT' -Value 0 -Type DWord -Force"));
-
-        // ===== 第一代自研扩展(不在 ZyperWin 文档中,保留)=====
-        catalog.Register(F("privacy.disable-lock-screen-tips", "关闭锁屏提示与推广", "隐私设置",
-            "锁屏界面不再显示提示、广告和推广内容(自研扩展)。", RiskLevel.Recommended, false, RestartRequirement.None,
-            "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager' -Name 'SubscribedContent-338387Enabled' -Value 0 -Type DWord -Force"));
     }
 
     private static FunctionItem F(

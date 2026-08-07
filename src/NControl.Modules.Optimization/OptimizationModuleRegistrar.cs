@@ -4,9 +4,9 @@ namespace NControl.Modules.Optimization;
 
 /// <summary>
 /// 优化模块:系统设置页与一键优化方案来源。
-/// 功能目录与《ZyperWin++ 当前功能统计表》(ZyperData.xml, 2026-08-02)对齐:
-/// 外观/资源管理器 29 + 性能优化设置 46 + 安全设置 10 + Edge优化设置 12 + 系统设置 16 + 更新设置 7 + 隐私设置 34。
-/// 第一代自研扩展(任务栏补充/游戏栏/传递优化等)保留在对应分类,标记为扩展。
+/// 功能目录与《ZyperWin++ 当前功能统计表》(ZyperData.xml, 2026-08-02)完全一致:
+/// 外观/资源管理器 29 + 性能优化设置 46 + 安全设置 10 + Edge优化设置 12 + 系统设置 15 + 更新设置 8 + 隐私设置 34。
+/// (自研扩展已移除;Win停止更新5000天自系统设置移入更新设置)
 /// </summary>
 public sealed class OptimizationModuleRegistrar : IModuleRegistrar
 {
@@ -32,11 +32,10 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
             TargetGroup = "推荐新用户",
             FeatureIds = new[]
             {
-                "taskbar.hide-search", "taskbar.hide-widgets", "taskbar.hide-copilot",
+                "taskbar.hide-search",
                 "start.disable-recommendations", "privacy.disable-ads-id",
-                "privacy.disable-lock-screen-tips", "explorer.show-extensions",
-                "performance.disable-transparency",
-                "explorer.notepad-wrap", "taskbar.clock-show-seconds", "explorer.quick-access-no-recent",
+                "explorer.show-extensions",
+                "explorer.notepad-wrap", "explorer.quick-access-no-recent",
                 "explorer.titlebar-full-path", "privacy.enable-clipboard-history"
             }
         });
@@ -51,16 +50,15 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
             FeatureIds = new[]
             {
                 // 轻度
-                "taskbar.hide-search", "taskbar.hide-widgets", "taskbar.hide-copilot",
+                "taskbar.hide-search",
                 "start.disable-recommendations", "privacy.disable-ads-id",
-                "privacy.disable-lock-screen-tips", "explorer.show-extensions",
-                "performance.disable-transparency",
+                "explorer.show-extensions",
                 "explorer.titlebar-full-path", "privacy.enable-clipboard-history",
                 // 追加
-                "taskbar.hide-chat", "taskbar.hide-taskview", "taskbar.align-left",
-                "explorer.open-this-pc", "explorer.show-hidden",
+                "taskbar.hide-taskview",
+                "explorer.open-this-pc",
                 "privacy.disable-settings-suggestions", "privacy.disable-tailored-experiences",
-                "privacy.disable-welcome-experience", "gaming.disable-game-dvr", "gaming.disable-game-bar",
+                "privacy.disable-welcome-experience", "gaming.disable-game-dvr",
                 // ZyperWin++ 文档对齐补充(仅安全/推荐级)
                 "taskbar.show-all-tray-icons", "taskbar.merge-buttons-always",
                 "explorer.foreground-responsiveness", "explorer.disable-autoplay", "explorer.no-recent-docs-history",
@@ -82,20 +80,17 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
             FeatureIds = new[]
             {
                 // 推荐
-                "taskbar.hide-search", "taskbar.hide-widgets", "taskbar.hide-copilot",
+                "taskbar.hide-search",
                 "start.disable-recommendations", "privacy.disable-ads-id",
-                "privacy.disable-lock-screen-tips", "explorer.show-extensions",
-                "performance.disable-transparency",
-                "taskbar.hide-chat", "taskbar.hide-taskview", "taskbar.align-left",
-                "explorer.open-this-pc", "explorer.show-hidden",
+                "explorer.show-extensions",
+                "taskbar.hide-taskview",
+                "explorer.open-this-pc",
                 "privacy.disable-settings-suggestions", "privacy.disable-tailored-experiences",
-                "privacy.disable-welcome-experience", "gaming.disable-game-dvr", "gaming.disable-game-bar",
+                "privacy.disable-welcome-experience", "gaming.disable-game-dvr",
                 "explorer.titlebar-full-path", "privacy.enable-clipboard-history",
                 // 谨慎追加
                 "explorer.classic-context-menu", "performance.disable-animations",
                 "performance.high-performance-plan", "update.disable-driver-updates",
-                "update.disable-delivery-optimization", "update.set-active-hours",
-                "update.pause-feature-updates-7d", "gaming.disable-game-mode",
                 "advanced.disable-sysmain", "advanced.disable-diagtrack", "advanced.disable-wsearch",
                 // 常用清理与预装应用(跨模块引用)
                 "cleanup.user-temp", "cleanup.thumbnails", "cleanup.recycle-bin",

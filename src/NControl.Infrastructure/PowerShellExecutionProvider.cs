@@ -88,50 +88,41 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
 
     /// <summary>
     /// 控制台窗口模式:启动独立控制台窗口实时显示命令进度(用于 DISM/SFC 等长耗时修复)。
-    /// 方案:将命令写入临时 .ps1 脚本(避免 cmd 引号嵌套丢失命令),脚本内按分号拆分为多个步骤依次执行,
-    /// 每步打印标题与退出码,全部完成后 pause 等待用户查看,再关闭窗口。
+    /// 方案:将命令写入临时 .ps1 脚本(避免 cmd 引号嵌套丢失命令),整段原样执行——
+    /// 分号连接的脚本在 PowerShell 中天然按顺序依次执行,无需额外拆分步骤。
+    /// 窗口内直接显示命令自身输出(DISM/SFC 进度条),完成后提示按任意键关闭。
     /// </summary>
     private ExecutionResult LaunchConsoleWindow(string script, FunctionItem item)
     {
         string? scriptFile = null;
         try
         {
-            // 1. 去除 provider 注入的编码前缀(控制台窗口已设 UTF-8,避免它成为单独步骤),再拆分步骤
+            // 去除 provider 注入的编码前缀(控制台窗口已设 UTF-8,避免重复设置)
             var cleaned = script.StartsWith("[Console]::OutputEncoding=", StringComparison.OrdinalIgnoreCase)
-                ? script[(script.IndexOf(';') + 1)..]
+                ? script[(script.IndexOf(';') + 1)..].TrimStart()
                 : script;
-            var steps = SplitTopLevel(cleaned, ';');
-            if (steps.Count == 0) steps.Add(cleaned);
 
-            // 2. 生成脚本内容:分步骤执行 + 标题 + 退出码 + 结尾 pause
+            // 生成脚本内容:编码 + PATH + 标题 + 整段命令原样执行 + 退出码 + 结尾 pause
             var sb = new StringBuilder();
             sb.AppendLine("[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;");
             sb.AppendLine("$ErrorActionPreference='Continue';");
             // 确保 System32 在 PATH(DISM/sfc 等系统工具可被找到,子进程环境可能缺)
             sb.AppendLine("$env:PATH = \"$env:SystemRoot\\System32;$env:SystemRoot;\" + $env:PATH;");
             sb.AppendLine($"Write-Host '====== {item.Name} ======' -ForegroundColor Cyan;");
-            sb.AppendLine($"Write-Host '共 {steps.Count} 个步骤,依次执行中,请勿关闭本窗口…' -ForegroundColor Yellow;");
+            sb.AppendLine("Write-Host '依次执行中,请勿关闭本窗口…' -ForegroundColor Yellow;");
             sb.AppendLine();
-            for (int i = 0; i < steps.Count; i++)
-            {
-                var s = steps[i].Trim();
-                if (string.IsNullOrWhiteSpace(s)) continue;
-                sb.AppendLine($"Write-Host ''; Write-Host '--- 步骤 {i + 1}/{steps.Count} ---' -ForegroundColor Cyan;");
-                sb.AppendLine($"Write-Host '执行: {s}' -ForegroundColor Gray;");
-                sb.AppendLine(s);
-                // 双引号字符串才能展开 $LASTEXITCODE;命令找不到时不更新该变量,兜底 -1
-                sb.AppendLine("$code = $LASTEXITCODE; if ($null -eq $code) { $code = -1 };");
-                sb.AppendLine($"Write-Host \"步骤 {i + 1} 退出码: $code\" -ForegroundColor {(i < steps.Count - 1 ? "Yellow" : "Green")};");
-                sb.AppendLine();
-            }
-            sb.AppendLine("Write-Host ''; Write-Host '===== 全部执行完成,请查看上方结果;按任意键关闭窗口 =====' -ForegroundColor Green;");
+            sb.AppendLine(cleaned);
+            sb.AppendLine();
+            sb.AppendLine("$code = $LASTEXITCODE; if ($null -eq $code) { $code = -1 };");
+            sb.AppendLine("Write-Host ''; Write-Host \"最终退出码: $code\" -ForegroundColor Green;");
+            sb.AppendLine("Write-Host '===== 全部执行完成,请查看上方结果;按任意键关闭窗口 =====' -ForegroundColor Green;");
             sb.AppendLine("$null = Read-Host;");
 
-            // 3. 写临时脚本(UTF-8 BOM,PowerShell 5.1 正确识别中文)
+            // 写临时脚本(UTF-8 BOM,PowerShell 5.1 正确识别中文)
             scriptFile = Path.Combine(Path.GetTempPath(), $"nctl_repair_{Guid.NewGuid():N}.ps1");
             File.WriteAllText(scriptFile, sb.ToString(), new UTF8Encoding(true));
 
-            // 4. 启动 PowerShell 控制台窗口:直接 powershell.exe -NoExit -File 脚本(窗口内依次执行各步骤)
+            // 启动 PowerShell 控制台窗口:直接 powershell.exe -NoExit -File 脚本(窗口内依次执行命令)
             var psi = new ProcessStartInfo
             {
                 FileName = PowerShellPath,
@@ -145,47 +136,12 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
             psi.ArgumentList.Add(scriptFile);
             System.Diagnostics.Process.Start(psi);
             return new ExecutionResult(true, 0,
-                $"已在控制台窗口启动「{item.Name}」({steps.Count} 个步骤),请查看窗口中的执行进度;完成后按任意键关闭窗口。", null);
+                $"已在控制台窗口启动「{item.Name}」,请查看窗口中的执行进度;完成后按任意键关闭窗口。", null);
         }
         catch (Exception ex)
         {
             return new ExecutionResult(false, -1, null, $"启动控制台窗口失败:{ex.Message}");
         }
-    }
-
-    /// <summary>按顶层分隔符拆分(忽略引号内与括号内的分隔符,避免拆坏字符串/表达式)。</summary>
-    private static List<string> SplitTopLevel(string text, char separator)
-    {
-        var parts = new List<string>();
-        int depth = 0;
-        char quote = '\0';
-        var cur = new StringBuilder();
-        foreach (var ch in text)
-        {
-            if (quote != '\0')
-            {
-                cur.Append(ch);
-                if (ch == quote) quote = '\0';
-                continue;
-            }
-            if (ch is '\'' or '"')
-            {
-                quote = ch;
-                cur.Append(ch);
-                continue;
-            }
-            if (ch is '(' or '{' or '[') { depth++; cur.Append(ch); continue; }
-            if (ch is ')' or '}' or ']') { depth--; cur.Append(ch); continue; }
-            if (ch == separator && depth == 0)
-            {
-                parts.Add(cur.ToString());
-                cur.Clear();
-                continue;
-            }
-            cur.Append(ch);
-        }
-        if (cur.Length > 0) parts.Add(cur.ToString());
-        return parts;
     }
 
     private async Task<ExecutionResult> RunDirectAsync(

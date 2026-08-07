@@ -38,6 +38,38 @@ public partial class AppsViewModel : ObservableObject
     public ObservableCollection<AppRowViewModel> Rows { get; } = new();
     public PresetCardViewModel? BloatPreset { get; }
 
+    /// <summary>软件安装页签:常用软件官网入口(点击打开浏览器)。</summary>
+    public IReadOnlyList<SoftwareEntry> SoftwareEntries { get; } = new[]
+    {
+        new SoftwareEntry("Chrome", "Google 浏览器,官方下载页", "https://www.google.com/chrome/"),
+        new SoftwareEntry("Firefox", "Mozilla 浏览器,官方下载页", "https://www.mozilla.org/firefox/"),
+        new SoftwareEntry("7-Zip", "开源压缩软件,官方下载页", "https://www.7-zip.org/"),
+        new SoftwareEntry("VLC", "开源播放器,官方下载页", "https://www.videolan.org/vlc/"),
+        new SoftwareEntry("VS Code", "微软开源代码编辑器,官方下载页", "https://code.visualstudio.com/"),
+        new SoftwareEntry("Everything", "本地文件搜索工具,官方下载页", "https://www.voidtools.com/"),
+        new SoftwareEntry("PowerToys", "微软系统工具集,官方下载页", "https://learn.microsoft.com/windows/powertoys/"),
+        new SoftwareEntry("PotPlayer", "多媒体播放器,官方下载页", "https://potplayer.daum.net/")
+    };
+
+    /// <summary>打开软件官网(浏览器)。</summary>
+    [RelayCommand]
+    private void OpenSoftware(SoftwareEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.Url)) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = entry.Url,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // 打开失败静默(浏览器不可用时)
+        }
+    }
+
     [ObservableProperty]
     private int activeTab;
 
@@ -118,3 +150,6 @@ public partial class AppsViewModel : ObservableObject
         }
     }
 }
+
+/// <summary>软件安装页签条目:软件名 + 说明 + 官方下载地址。</summary>
+public sealed record SoftwareEntry(string Name, string Description, string Url);

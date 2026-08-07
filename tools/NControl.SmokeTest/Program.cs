@@ -390,6 +390,9 @@ catch (Exception ex)
 }
 Check(tabSwitched, "应用管理页页签切换命令接受字符串参数(闪退修复验证)", $"ActiveTab={appsVm.ActiveTab}");
 Check(appsVm.BloatPreset is not null, "应用管理页预装应用方案卡可用", appsVm.BloatPreset?.CountText);
+Check(appsVm.SoftwareEntries.Count >= 5, "应用管理页软件安装条目不少于 5 个", appsVm.SoftwareEntries.Count.ToString());
+Check(appsVm.SoftwareEntries.All(e => !string.IsNullOrWhiteSpace(e.Url) && e.Url.StartsWith("https://")),
+    "软件安装条目均为 https 官方地址", string.Join(",", appsVm.SoftwareEntries.Select(e => e.Name)));
 
 // 应用模块:卸载命令格式 + 恢复能力如实标注(文档 §12.3 不可逆/暂不支持恢复如实标注)
 var appsModule = catalog.ByModule(ModuleKind.Applications).ToArray();

@@ -263,6 +263,16 @@ catch (Exception ex)
 Check(tabSwitched, "应用管理页页签切换命令接受字符串参数(闪退修复验证)", $"ActiveTab={appsVm.ActiveTab}");
 Check(appsVm.BloatPreset is not null, "应用管理页预装应用方案卡可用", appsVm.BloatPreset?.CountText);
 
+// 应用模块:卸载命令格式 + 恢复能力如实标注(文档 §12.3 不可逆/暂不支持恢复如实标注)
+var appsModule = catalog.ByModule(ModuleKind.Applications).ToArray();
+Check(appsModule.Length == 10, "应用模块预装应用功能项数量=10", appsModule.Length.ToString());
+Check(appsModule.All(f => f.Command.Contains("Remove-AppxPackage", StringComparison.OrdinalIgnoreCase)),
+    "应用模块全部功能项包含 Remove-AppxPackage 卸载命令", string.Join(",", appsModule.Select(f => f.Id)));
+Check(appsModule.All(f => f.RestoreCommand is null || f.RestoreCommand.Length == 0),
+    "应用模块不提供恢复命令(卸载后需从商店重新安装,如实标注)", "");
+Check(appsModule.All(f => f.Description.Contains("可按需删除") || f.Description.Contains("默认不选") || f.Description.Contains("可卸载") || f.Description.Contains("删除")),
+    "应用模块描述均说明可删除/可卸载", string.Join(" | ", appsModule.Select(f => f.Description[..Math.Min(20, f.Description.Length)])));
+
 // 搜索
 Check(catalog.Search("SysMain").Any(f => f.Id == "advanced.disable-sysmain"), "搜索可命中功能");
 Check(catalog.Search("不存在的关键词xyz").Count == 0, "搜索无结果时返回空");

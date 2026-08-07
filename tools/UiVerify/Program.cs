@@ -16,8 +16,13 @@ class UiVerify
     [DllImport("user32.dll")] static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
     [StructLayout(LayoutKind.Sequential)] struct RECT { public int L, T, R, B; }
 
-    static void Main()
+    static void Main(string[] args)
     {
+        if (args.Length > 0 && args[0] == "--apps")
+        {
+            RunAppsVerify();
+            return;
+        }
         var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\NControl.FunctionTest\uiverify.txt", append: false, new UTF8Encoding(true));
         var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
 
@@ -165,6 +170,71 @@ class UiVerify
                     }
                 }
             }
+        }
+        log.Close();
+    }
+
+    static void RunAppsVerify()
+    {
+        var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\apps_uiverify.txt", append: false, new UTF8Encoding(true));
+        var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
+
+        var procs = Process.GetProcessesByName("NControl");
+        Process? target = procs.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
+        if (target is null) { L("FAIL 无主窗口进程"); log.Close(); return; }
+        L($"使用 PID {target.Id}");
+
+        var root = AutomationElement.FromHandle(target.MainWindowHandle);
+        var nav = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "应用管理"));
+        if (nav is null) { L("FAIL 未找到'应用管理'导航"); log.Close(); return; }
+        var rc = nav.Current.BoundingRectangle;
+        SetForegroundWindow(target.MainWindowHandle);
+        System.Threading.Thread.Sleep(300);
+        SetCursorPos((int)(rc.X + rc.Width / 2), (int)(rc.Y + rc.Height / 2));
+        System.Threading.Thread.Sleep(200);
+        mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
+        mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
+        L($"已点击'应用管理'导航({rc.X},{rc.Y})");
+        System.Threading.Thread.Sleep(1500);
+
+        var title = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "预装应用"));
+        L($"页面'预装应用'文字: {(title is null ? "未找到" : "找到")}");
+        var scanBtn = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "重新扫描"));
+        L($"'重新扫描'按钮: {(scanBtn is null ? "未找到" : "找到")}");
+        var clipchamp = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "Clipchamp"));
+        L($"'Clipchamp'行: {(clipchamp is null ? "未找到" : "找到")}");
+        var storeNote = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "卸载为单向操作,需要时可从 Microsoft Store 重新安装。"));
+        L($"卸载说明文案: {(storeNote is null ? "未找到" : "找到")}");
+        if (storeNote is null)
+        {
+            // 长文本可能被 TextWrapping 拆分,用前缀匹配
+            var all1 = root.FindAll(TreeScope.Descendants, Condition.TrueCondition);
+            string? note = null;
+            foreach (AutomationElement e in all1)
+            {
+                var n = e.Current.Name;
+                if (n is not null && n.Contains("Microsoft Store", StringComparison.OrdinalIgnoreCase)) { note = n; break; }
+            }
+            L($"卸载说明(模糊匹配): {(note is null ? "仍未找到" : note)}");
+        }
+        if (scanBtn is not null)
+        {
+            var sr = scanBtn.Current.BoundingRectangle;
+            SetCursorPos((int)(sr.X + sr.Width / 2), (int)(sr.Y + sr.Height / 2));
+            System.Threading.Thread.Sleep(200);
+            mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
+            mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
+            L($"已点击'重新扫描'按钮({sr.X},{sr.Y})");
+            System.Threading.Thread.Sleep(6000);
+            // 扫描完成文案是完整句子,用前缀匹配
+            var all2 = root.FindAll(TreeScope.Descendants, Condition.TrueCondition);
+            string? scanText = null;
+            foreach (AutomationElement e in all2)
+            {
+                var n = e.Current.Name;
+                if (n is not null && n.StartsWith("扫描完成", StringComparison.Ordinal)) { scanText = n; break; }
+            }
+            L($"扫描结果文案: {(scanText is null ? "未找到'扫描完成'" : $"找到: {scanText}")}");
         }
         log.Close();
     }

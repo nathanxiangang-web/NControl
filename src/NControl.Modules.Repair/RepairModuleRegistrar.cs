@@ -13,14 +13,11 @@ public sealed class RepairModuleRegistrar : IModuleRegistrar
     public void RegisterFeatures(IFunctionCatalog catalog)
     {
         // ---------- 系统映像与文件 ----------
-        catalog.Register(F("repair.dism-restorehealth", "系统映像修复(DISM)", "系统映像与文件",
-            "使用 DISM 检查并修复 Windows 系统映像;适用于系统文件损坏、更新失败等场景,耗时较长。",
+        // 合并项:连续执行 DISM 扫描健康 → 修复映像 → SFC 扫描(常规修复顺序,耗时较长)
+        catalog.Register(F("repair.system-integrity", "系统映像与文件修复", "系统映像与文件",
+            "连续执行:① DISM 扫描映像健康 → ② DISM 修复映像 → ③ SFC 扫描系统文件。适用于系统文件损坏、更新失败、蓝屏等场景,耗时较长(建议预留 20-30 分钟)。",
             RiskLevel.Caution, true, RestartRequirement.None,
-            "DISM.exe /Online /Cleanup-Image /RestoreHealth", 1800));
-        catalog.Register(F("repair.sfc-scannow", "系统文件检查(SFC)", "系统映像与文件",
-            "使用 SFC 扫描并恢复受损的系统文件;适用于蓝屏、程序异常等场景,耗时较长。",
-            RiskLevel.Caution, true, RestartRequirement.None,
-            "sfc.exe /scannow", 1800));
+            "DISM.exe /Online /Cleanup-Image /ScanHealth; DISM.exe /Online /Cleanup-Image /RestoreHealth; sfc.exe /scannow", 5400));
 
         // ---------- 更新与商店 ----------
         catalog.Register(F("repair.update-reset", "重置 Windows 更新组件", "更新与商店",

@@ -10,8 +10,7 @@ public partial class RepairViewModel : ObservableObject
 {
     public RepairViewModel(IFunctionCatalog catalog, NavigationService nav)
     {
-        AddCard(catalog, nav, "repair.dism-restorehealth", "D");
-        AddCard(catalog, nav, "repair.sfc-scannow", "S");
+        AddCard(catalog, nav, "repair.system-integrity", "S");
         AddCard(catalog, nav, "repair.update-reset", "U");
         AddCard(catalog, nav, "repair.store-reregister", "M");
 

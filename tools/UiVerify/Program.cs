@@ -44,6 +44,11 @@ class UiVerify
             RunSettings2Verify();
             return;
         }
+        if (args.Length > 0 && args[0] == "--repair")
+        {
+            RunRepairVerify();
+            return;
+        }
         var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\NControl.FunctionTest\uiverify.txt", append: false, new UTF8Encoding(true));
         var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
 
@@ -433,6 +438,29 @@ class UiVerify
         // 检查'已优化'徽标存在(已优化项只显示标识)
         var badge = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "已优化"));
         L($"'已优化'徽标: {(badge is null ? "未找到(本机可能无已优化项)" : "找到")}");
+        log.Close();
+    }
+
+    static void RunRepairVerify()
+    {
+        var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\repair_uiverify.txt", append: false, new UTF8Encoding(true));
+        var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
+        var procs = Process.GetProcessesByName("NControl");
+        Process? target = procs.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
+        if (target is null) { L("FAIL 无主窗口进程"); log.Close(); return; }
+        var root = AutomationElement.FromHandle(target.MainWindowHandle);
+        SetForegroundWindow(target.MainWindowHandle);
+        System.Threading.Thread.Sleep(300);
+
+        KeyActivate(root, "系统修复", L);
+        System.Threading.Thread.Sleep(1500);
+
+        var merged = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "系统映像与文件修复"));
+        L($"合并项'系统映像与文件修复': {(merged is null ? "未找到" : "找到")}");
+        var oldDism = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "系统映像修复(DISM)"));
+        L($"旧项'系统映像修复(DISM)': {(oldDism is null ? "✓ 已移除" : "✗ 仍存在")}");
+        var oldSfc = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "系统文件检查(SFC)"));
+        L($"旧项'系统文件检查(SFC)': {(oldSfc is null ? "✓ 已移除" : "✗ 仍存在")}");
         log.Close();
     }
 }

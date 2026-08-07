@@ -412,6 +412,12 @@ public partial class RepairCardViewModel : ObservableObject
     [RelayCommand]
     private async Task RunAsync()
     {
+        // 控制台窗口项:不弹执行成功框,直接弹控制台窗口看进度
+        if (Item.UseConsoleWindow)
+        {
+            await _nav.RunConsoleAsync(Item);
+            return;
+        }
         await _nav.RunSingleAsync(Item);
     }
 }

@@ -397,6 +397,15 @@ var restorable = catalog.All.Count(f => RestoreCommandBuilder.Build(f) is not nu
 Console.WriteLine($"可恢复功能: {restorable} / {catalog.All.Count}");
 Check(restorable >= catalog.All.Count * 0.6, "目录中可恢复功能占比不低于 60%", $"{restorable}/{catalog.All.Count}");
 
+// 控制台窗口执行模式(系统修复长命令):repair.system-integrity 启用
+var integrityItem = catalog.Find("repair.system-integrity");
+Check(integrityItem is not null && integrityItem.UseConsoleWindow,
+    "系统修复:DISM+SFC 合并项启用控制台窗口模式(实时进度)", integrityItem?.Command ?? "null");
+Check(integrityItem is not null && integrityItem.Command!.Contains("ScanHealth") && integrityItem.Command.Contains("RestoreHealth") && integrityItem.Command.Contains("scannow"),
+    "系统修复:合并命令包含 ScanHealth+RestoreHealth+sfc scannow 三步", "");
+Check(catalog.ByModule(ModuleKind.Repair).All(f => !f.UseConsoleWindow || f.RequiresAdmin),
+    "系统修复:控制台窗口项均需管理员权限", "");
+
 // ---------- 5. 应用管理页页签命令修复验证 ----------
 // 回归:RelayCommand<int> 收到字符串 CommandParameter 会抛 ArgumentException(曾导致点击页签闪退)
 var appsVm = new NControl.Presentation.ViewModels.AppsViewModel(

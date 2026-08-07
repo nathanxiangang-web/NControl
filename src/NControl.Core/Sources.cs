@@ -42,9 +42,9 @@ public static class SourceLedger
             "ZyperWin++(参考实现)",
             "未公开(免费软件,接入前需核对)",
             "4.2(2026-08-02 功能数据)",
-            "外观/资源管理器、性能、系统设置、隐私、更新、Edge 等约 123 项注册表/服务配置",
-            "仅参考注册表与系统命令操作;名称、说明、风险分级全部按 NControl 标准重写;不继承其 UI 与流程;经评估不引入 Defender 关闭等高破坏性默认项",
-            "Windows 10/11 x64(待真机验证)"),
+            "外观/资源管理器、性能优化、系统设置、安全、隐私、更新、Edge 共 154 项注册表/服务配置",
+            "按《ZyperWin++ 当前功能统计表》对齐名称、分类与影响描述;实现参考其 ZyperData.xml 的 RegWrite/SetServiceStart/命令操作;不继承其 UI 与流程;经评估不引入 Defender 关闭等高破坏性默认项;高风险项仅在其所属分类显示且不进预设",
+            "Windows 10/11 x64(2026-08-07 文档对齐)"),
         new SourceRecord(
             "Windows 系统内置工具",
             "Windows 系统组件",

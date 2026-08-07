@@ -40,3 +40,20 @@ foreach (var p in catalog.Presets)
     var dup = ids.Count - ids.Distinct().Count();
     Console.WriteLine($"  {p.Id,-24} {p.Name,-12} 引用 {ids.Count} 项(去重 {ids.Distinct().Count()},重复 {dup})");
 }
+
+Console.WriteLine($"\n== 预设引用校验(是否存在) ==");
+var missing = new List<string>();
+foreach (var p in catalog.Presets)
+    foreach (var id in p.FeatureIds)
+        if (catalog.Find(id) is null)
+            missing.Add($"{p.Id} -> {id}");
+Console.WriteLine(missing.Count == 0 ? "  全部解析成功 PASS" : string.Join("\n", missing.Select(m => $"  缺失: {m}")));
+
+Console.WriteLine($"\n== 高风险项(不进预设) ==");
+foreach (var f in all.Where(f => f.Risk == RiskLevel.HighRisk))
+    Console.WriteLine($"  [{f.Category}] {f.Name}");
+
+// 导出优化模块清单(供文档对齐校验)
+Console.WriteLine($"\n== 优化模块清单(分类|名称) ==");
+foreach (var f in all.Where(f => f.Module == ModuleKind.Optimization).OrderBy(f => f.Category).ThenBy(f => f.Name))
+    Console.WriteLine($"{f.Category}|{f.Name}");

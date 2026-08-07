@@ -100,12 +100,30 @@
             </Border>
         </StackPanel>
 
-        <!-- 其他页签:第一代暂未纳入(诚实占位,不造假) -->
+        <!-- Windows 组件页签:暂未纳入 -->
         <Border Style="{StaticResource Card}" Padding="30" Margin="0,8,0,0"
-                Visibility="{Binding ActiveTab, Converter={x:Static conv:IntEqualsToVisibilityConverter.Instance}, ConverterParameter=not0}">
+                Visibility="{Binding ActiveTab, Converter={x:Static conv:IntEqualsToVisibilityConverter.Instance}, ConverterParameter=2}">
             <StackPanel HorizontalAlignment="Center">
                 <TextBlock Text="该视图将在后续版本提供" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <TextBlock Text="第一代聚焦预装应用管理;已安装软件、Windows 组件与软件安装能力在第二阶段规划中。"
+                <TextBlock Text="Windows 组件管理能力在后续版本规划中。"
+                           Style="{StaticResource MutedText}" Margin="0,8,0,0" TextAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <!-- 其他页签(已安装软件/软件安装):暂未纳入 -->
+        <Border Style="{StaticResource Card}" Padding="30" Margin="0,8,0,0"
+                Visibility="{Binding ActiveTab, Converter={x:Static conv:IntEqualsToVisibilityConverter.Instance}, ConverterParameter=1}">
+            <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="该视图将在后续版本提供" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Text="已安装软件与软件安装能力在后续版本规划中。"
+                           Style="{StaticResource MutedText}" Margin="0,8,0,0" TextAlignment="Center" />
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource Card}" Padding="30" Margin="0,8,0,0"
+                Visibility="{Binding ActiveTab, Converter={x:Static conv:IntEqualsToVisibilityConverter.Instance}, ConverterParameter=3}">
+            <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="该视图将在后续版本提供" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Text="软件安装能力在后续版本规划中。"
                            Style="{StaticResource MutedText}" Margin="0,8,0,0" TextAlignment="Center" />
             </StackPanel>
         </Border>

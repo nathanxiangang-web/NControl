@@ -383,10 +383,10 @@ public partial class AppRowViewModel : ObservableObject
         }
     }
 
-    public void ApplyScanResult(bool installed)
+    public void ApplyScanResult(bool installed, bool residual = false)
     {
         IsInstalled = installed;
-        InstalledText = installed ? "已安装" : "未安装";
+        InstalledText = installed ? "已安装" : residual ? "残留(未彻底卸载)" : "未安装";
     }
 }
 

@@ -28,6 +28,11 @@ class UiVerify
             RunGen2Verify();
             return;
         }
+        if (args.Length > 0 && args[0] == "--components")
+        {
+            RunComponentsVerify();
+            return;
+        }
         var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\NControl.FunctionTest\uiverify.txt", append: false, new UTF8Encoding(true));
         var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
 
@@ -308,5 +313,49 @@ class UiVerify
         mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
         mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
         L($"已点击 '{name}'");
+    }
+
+    static void RunComponentsVerify()
+    {
+        var log = new StreamWriter(@"C:\Users\test\.openclaw\workspace\tools\components_uiverify.txt", append: false, new UTF8Encoding(true));
+        var L = new Action<string>(s => { Console.WriteLine(s); log.WriteLine(s); log.Flush(); });
+        var procs = Process.GetProcessesByName("NControl");
+        Process? target = procs.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
+        if (target is null) { L("FAIL 无主窗口进程"); log.Close(); return; }
+        var root = AutomationElement.FromHandle(target.MainWindowHandle);
+
+        // 1. 进入应用管理
+        Click(root, target, "应用管理", L);
+        System.Threading.Thread.Sleep(1200);
+        // 2. 点击 Windows 组件 Tab(RadioButton)
+        var tab = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "Windows 组件"));
+        if (tab is null) { L("FAIL 未找到 Windows 组件 Tab"); log.Close(); return; }
+        var tr = tab.Current.BoundingRectangle;
+        SetForegroundWindow(target.MainWindowHandle);
+        System.Threading.Thread.Sleep(200);
+        SetCursorPos((int)(tr.X + tr.Width / 2), (int)(tr.Y + tr.Height / 2));
+        System.Threading.Thread.Sleep(150);
+        mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
+        mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
+        L("已点击 Windows 组件 Tab");
+        System.Threading.Thread.Sleep(1200);
+
+        // 3. 检查 6 个组件行
+        foreach (var name in new[] { "任务栏搜索框", "任务视图按钮", "小组件按钮" })
+        {
+            var el = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, name));
+            L($"组件行 [{name}]: {(el is null ? "未找到" : "找到")}");
+        }
+        // 4. 检查状态文本
+        var all = root.FindAll(TreeScope.Descendants, Condition.TrueCondition);
+        foreach (AutomationElement e in all)
+        {
+            var n = e.Current.Name;
+            if (n is not null && (n.StartsWith("当前:开") || n.StartsWith("当前:关") || n.StartsWith("未配置")))
+            {
+                L($"状态: {n}");
+            }
+        }
+        log.Close();
     }
 }

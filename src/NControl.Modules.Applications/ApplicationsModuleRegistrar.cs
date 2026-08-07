@@ -15,44 +15,44 @@ public sealed class ApplicationsModuleRegistrar : IModuleRegistrar
         catalog.Register(F("apps.clipchamp", "Clipchamp", "预装应用",
             "Microsoft 的视频编辑器。属于常见预装应用,可按需删除。",
             RiskLevel.Recommended, false, RestartRequirement.None, "Microsoft.Clipchamp",
-            "Get-AppxPackage -Name 'Microsoft.Clipchamp' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.Clipchamp' | Remove-AppxPackage -AllUsers"));
         catalog.Register(F("apps.bing-news", "Microsoft News(资讯)", "预装应用",
             "新闻资讯应用。属于常见预装应用,可按需删除。",
             RiskLevel.Recommended, false, RestartRequirement.None, "Microsoft.BingNews",
-            "Get-AppxPackage -Name 'Microsoft.BingNews' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.BingNews' | Remove-AppxPackage -AllUsers"));
         catalog.Register(F("apps.bing-weather", "天气", "预装应用",
             "天气应用。属于常见预装应用,可按需删除。",
             RiskLevel.Recommended, false, RestartRequirement.None, "Microsoft.BingWeather",
-            "Get-AppxPackage -Name 'Microsoft.BingWeather' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.BingWeather' | Remove-AppxPackage -AllUsers"));
         catalog.Register(F("apps.gethelp", "获取帮助", "预装应用",
             "Microsoft 帮助应用。属于常见预装应用,可按需删除。",
             RiskLevel.Recommended, false, RestartRequirement.None, "Microsoft.GetHelp",
-            "Get-AppxPackage -Name 'Microsoft.GetHelp' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.GetHelp' | Remove-AppxPackage -AllUsers"));
         catalog.Register(F("apps.feedback-hub", "反馈中心", "预装应用",
             "向 Microsoft 提交反馈的应用。属于常见预装应用,可按需删除。",
             RiskLevel.Recommended, false, RestartRequirement.None, "Microsoft.WindowsFeedbackHub",
-            "Get-AppxPackage -Name 'Microsoft.WindowsFeedbackHub' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.WindowsFeedbackHub' | Remove-AppxPackage -AllUsers"));
         catalog.Register(F("apps.solitaire", "纸牌游戏合集", "预装应用",
             "Microsoft Solitaire Collection 游戏。属于常见预装应用,可按需删除。",
             RiskLevel.Recommended, false, RestartRequirement.None, "Microsoft.MicrosoftSolitaireCollection",
-            "Get-AppxPackage -Name 'Microsoft.MicrosoftSolitaireCollection' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.MicrosoftSolitaireCollection' | Remove-AppxPackage -AllUsers"));
         catalog.Register(F("apps.maps", "Windows 地图", "预装应用",
             "Windows 地图应用。属于常见预装应用,可按需删除。",
             RiskLevel.Recommended, false, RestartRequirement.None, "Microsoft.WindowsMaps",
-            "Get-AppxPackage -Name 'Microsoft.WindowsMaps' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.WindowsMaps' | Remove-AppxPackage -AllUsers"));
 
         catalog.Register(F("apps.xbox-gamebar", "Xbox Game Bar", "预装应用",
             "游戏录制与快捷入口。游戏用户可能用到,默认不选。",
             RiskLevel.Caution, false, RestartRequirement.None, "Microsoft.XboxGamingOverlay",
-            "Get-AppxPackage -Name 'Microsoft.XboxGamingOverlay' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.XboxGamingOverlay' | Remove-AppxPackage -AllUsers"));
         catalog.Register(F("apps.todo", "Microsoft To Do", "预装应用",
             "任务清单应用。部分用户日常使用,默认不选。",
             RiskLevel.Caution, false, RestartRequirement.None, "Microsoft.Todo",
-            "Get-AppxPackage -Name 'Microsoft.Todo' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.Todo' | Remove-AppxPackage -AllUsers"));
         catalog.Register(F("apps.copilot", "Copilot", "预装应用",
             "系统集成的 Copilot 应用。如不使用可按需删除。",
             RiskLevel.Caution, false, RestartRequirement.None, "Microsoft.Copilot",
-            "Get-AppxPackage -Name 'Microsoft.Copilot' | Remove-AppxPackage"));
+            "Get-AppxPackage -AllUsers -Name 'Microsoft.Copilot' | Remove-AppxPackage -AllUsers"));
     }
 
     public void RegisterPresets(IFunctionCatalog catalog)
@@ -84,7 +84,7 @@ public sealed class ApplicationsModuleRegistrar : IModuleRegistrar
         Risk = risk,
         RequiresAdmin = admin,
         Restart = restart,
-        Source = "系统命令(Get-AppxPackage / Remove-AppxPackage)",
+        Source = "系统命令(Get-AppxPackage -AllUsers / Remove-AppxPackage -AllUsers)",
         Command = command,
         Extra = packageName
     };

@@ -18,18 +18,22 @@ public partial class AppsViewModel : ObservableObject
     public AppsViewModel(
         IFunctionCatalog catalog,
         SelectionService selection,
-        IEnumerable<IExecutionProvider> providers)
+        IEnumerable<IExecutionProvider> providers,
+        CompatibilityEngine? compat = null)
     {
         _catalog = catalog;
         _powerShell = providers.First(p => p.CanHandle(ExecutionKind.PowerShell));
+        _compat = compat ?? new CompatibilityEngine(new Infrastructure.WindowsEnvironmentProbe());
 
-        foreach (var item in catalog.ByModule(ModuleKind.Applications))
+        foreach (var item in catalog.ByModule(ModuleKind.Applications).Where(f => f.Category == "预装应用"))
             Rows.Add(new AppRowViewModel(item, selection));
 
         var preset = catalog.Presets.FirstOrDefault(p => p.Id == "preset.apps.recommended");
         if (preset is not null)
             BloatPreset = new PresetCardViewModel(preset, catalog, selection);
     }
+
+    private readonly CompatibilityEngine _compat;
 
     public ObservableCollection<AppRowViewModel> Rows { get; } = new();
     public PresetCardViewModel? BloatPreset { get; }
@@ -59,6 +63,7 @@ public partial class AppsViewModel : ObservableObject
 
         try
         {
+            // 扫描所有用户注册(提权下可查 AllUsers):区分 已安装/仅残留/未安装
             var probe = new FunctionItem
             {
                 Id = "probe.appx-list",
@@ -71,23 +76,37 @@ public partial class AppsViewModel : ObservableObject
                 Restart = RestartRequirement.None,
                 Source = "系统命令",
                 Kind = ExecutionKind.PowerShell,
-                Command = "Get-AppxPackage | ForEach-Object { $_.Name }",
+                Command = "$cur = Get-AppxPackage | ForEach-Object { $_.Name }; $all = Get-AppxPackage -AllUsers | ForEach-Object { $_.Name }; @{Current=($cur | Sort-Object -Unique); All=($all | Sort-Object -Unique)} | ConvertTo-Json -Compress",
                 TimeoutSeconds = 120
             };
 
             var result = await _powerShell.ExecuteAsync(probe, null, CancellationToken.None);
-            var installed = new HashSet<string>(
-                (result.Output ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                StringComparer.OrdinalIgnoreCase);
+            var output = (result.Output ?? "").Trim();
+            var jsonStart = output.IndexOf('{');
+            var json = jsonStart >= 0 ? output[jsonStart..] : "";
 
-            int found = 0;
+            var current = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var allUsers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrEmpty(json))
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                foreach (var n in root.GetProperty("Current").EnumerateArray()) current.Add(n.GetString() ?? "");
+                foreach (var n in root.GetProperty("All").EnumerateArray()) allUsers.Add(n.GetString() ?? "");
+            }
+
+            int found = 0, residual = 0;
             foreach (var row in Rows)
             {
-                var isInstalled = installed.Contains(row.PackageName);
-                row.ApplyScanResult(isInstalled);
+                var isInstalled = current.Contains(row.PackageName);
+                var isResidual = !isInstalled && allUsers.Contains(row.PackageName);
+                row.ApplyScanResult(isInstalled, isResidual);
                 if (isInstalled) found++;
+                if (isResidual) residual++;
             }
-            ScanStateText = $"扫描完成:检测到 {found} 个已安装,其余未安装或已被移除";
+            ScanStateText = residual > 0
+                ? $"扫描完成:检测到 {found} 个已安装,{residual} 个存在残留(未彻底卸载),其余未安装"
+                : $"扫描完成:检测到 {found} 个已安装,其余未安装或已被移除";
         }
         catch (Exception ex)
         {

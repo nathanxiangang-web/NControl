@@ -107,6 +107,8 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
             var sb = new StringBuilder();
             sb.AppendLine("[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;");
             sb.AppendLine("$ErrorActionPreference='Continue';");
+            // 确保 System32 在 PATH(DISM/sfc 等系统工具可被找到,子进程环境可能缺)
+            sb.AppendLine("$env:PATH = \"$env:SystemRoot\\System32;$env:SystemRoot;\" + $env:PATH;");
             sb.AppendLine($"Write-Host '====== {item.Name} ======' -ForegroundColor Cyan;");
             sb.AppendLine($"Write-Host '共 {steps.Count} 个步骤,依次执行中,请勿关闭本窗口…' -ForegroundColor Yellow;");
             sb.AppendLine();
@@ -117,7 +119,9 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
                 sb.AppendLine($"Write-Host ''; Write-Host '--- 步骤 {i + 1}/{steps.Count} ---' -ForegroundColor Cyan;");
                 sb.AppendLine($"Write-Host '执行: {s}' -ForegroundColor Gray;");
                 sb.AppendLine(s);
-                sb.AppendLine($"Write-Host '步骤 {i + 1} 退出码: $LASTEXITCODE' -ForegroundColor {(i < steps.Count - 1 ? "Yellow" : "Green")};");
+                // 双引号字符串才能展开 $LASTEXITCODE;命令找不到时不更新该变量,兜底 -1
+                sb.AppendLine("$code = $LASTEXITCODE; if ($null -eq $code) { $code = -1 };");
+                sb.AppendLine($"Write-Host \"步骤 {i + 1} 退出码: $code\" -ForegroundColor {(i < steps.Count - 1 ? "Yellow" : "Green")};");
                 sb.AppendLine();
             }
             sb.AppendLine("Write-Host ''; Write-Host '===== 全部执行完成,请查看上方结果;按任意键关闭窗口 =====' -ForegroundColor Green;");

@@ -1,0 +1,4 @@
+﻿OK firewall-restore
+OK enableautotray-remove
+OK auto-restart-signon-remove
+DONE

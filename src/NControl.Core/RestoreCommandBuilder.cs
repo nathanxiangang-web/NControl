@@ -61,7 +61,16 @@ public static class RestoreCommandBuilder
             .Distinct()
             .ToArray();
         if (serviceNames.Length > 0)
-            parts.Add(string.Join("; ", serviceNames.Select(n => $"Set-Service {n} -StartupType Manual -ErrorAction SilentlyContinue")));
+        {
+            // 已知默认 Automatic 的服务:恢复为 Automatic(否则远程注册表等重启后不自动启动)
+            var autoDefaults = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "RemoteRegistry", "DPS", "TrkWks", "SysMain", "WSearch", "DiagTrack", "PcaSvc", "HomeGroupProvider"
+            };
+            parts.Add(string.Join("; ", serviceNames.Select(n =>
+                $"Set-Service {n} -StartupType {(autoDefaults.Contains(n) ? "Automatic" : "Manual")} -ErrorAction SilentlyContinue; " +
+                $"Start-Service {n} -ErrorAction SilentlyContinue")));
+        }
 
         // ---- 注册表类:反向删除写入的值 ----
         var pairs = RegWritePattern.Matches(cmd)

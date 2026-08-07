@@ -1,0 +1,12 @@
+﻿OK RemoteRegistry->Automatic
+OK WerSvc->Manual
+OK DPS->Automatic
+OK TrkWks->Automatic
+OK SysMain->Automatic
+OK WSearch->Automatic
+OK DiagTrack->Automatic
+OK HomeGroupProvider->Manual
+OK SmsRouter->Manual
+OK PcaSvc->Automatic
+OK hpet->Manual
+DONE

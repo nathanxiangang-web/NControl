@@ -25,6 +25,11 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
     private static readonly System.Text.RegularExpressions.Regex RegRemoveValuePattern = new(
         @"Remove-ItemProperty\s+-Path\s+'([^']+)'\s+-Name\s+'([^']+)'([^;]*)",
         System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>服务操作整句:Set-Service X ...; / Stop-Service X ...;(含参数,到分号为止)</summary>
+    private static readonly System.Text.RegularExpressions.Regex ServiceOpPattern = new(
+        @"(Set-Service|Stop-Service)\s+([A-Za-z0-9_]+)([^;]*)",
+        System.Text.RegularExpressions.RegexOptions.Compiled);
     private readonly ILogger<PowerShellExecutionProvider> _logger;
 
     /// <summary>
@@ -48,22 +53,24 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
         // 中文系统下 powershell.exe 重定向输出默认 GBK(代码页 936);强制 UTF-8,避免中文乱码
         script = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; " + script;
 
-        // 自动创建目标键:新系统上 HKCU/HKLM 子键可能不存在,Set-ItemProperty 不会自动建键。
-        // 注意:不能对已存在的键用 New-Item -Force(会尝试删除重建,报"该子项不存在,无法删除子项目录树"),
-        // 因此改为 if (-not (Test-Path)) 才创建,幂等且不破坏已有键。
+        // 幂等注入(核心):
+        // 1) 建键:Set-ItemProperty 目标键不存在时自动创建(if -not Test-Path 才建,不破坏已有键)
+        // 2) 删键:Remove-Item 仅当目标键存在时执行(避免报错/退出码1)
+        // 3) 删值:Remove-ItemProperty 仅当目标值存在时执行(幂等,目标不存在视为成功)
+        // 全部包裹后,同一命令重复执行/恢复均无副作用,退出码恒为 0(成功路径)。
         script = RegWriteKeyPattern.Replace(script,
             m => $"if (-not (Test-Path '{m.Groups[1].Value}')) {{ New-Item -Path '{m.Groups[1].Value}' -Force | Out-Null }}; Set-ItemProperty -Path '{m.Groups[1].Value}'");
-
-        // 删除类命令同样保护:Remove-ItemProperty/Remove-Item 对不存在的键会报错并使进程退出码=1,
-        // 导致 provider 误判失败(影响恢复命令:目标本来不存在时也应视为成功)。
-        // 只在目标键存在时执行删除,幂等且不产生错误。
-        // 删除类命令同样保护:Remove-ItemProperty/Remove-Item 对不存在的目标会报错并使进程退出码=1,
-        // 导致 provider 误判失败(影响恢复命令:目标本来不存在时也应视为成功)。
-        // 键存在才删键;值存在才删值。幂等且不产生错误。
         script = RegRemoveKeyPattern.Replace(script,
             m => $"if (Test-Path '{m.Groups[1].Value}') {{ Remove-Item -Path '{m.Groups[1].Value}'{m.Groups[2].Value} }}");
         script = RegRemoveValuePattern.Replace(script,
             m => $"if (Get-ItemProperty -Path '{m.Groups[1].Value}' -Name '{m.Groups[2].Value}' -ErrorAction SilentlyContinue) {{ Remove-ItemProperty -Path '{m.Groups[1].Value}' -Name '{m.Groups[2].Value}'{m.Groups[3].Value} }}");
+
+        // 4) 服务操作:目标服务不存在时静默跳过。若命令已自带 Get-Service 保护(如家庭组/HPET),跳过注入避免嵌套。
+        if (!script.Contains("Get-Service", StringComparison.OrdinalIgnoreCase))
+        {
+            script = ServiceOpPattern.Replace(script,
+                m => $"if (Get-Service {m.Groups[2].Value} -ErrorAction SilentlyContinue) {{ {m.Groups[1].Value} {m.Groups[2].Value}{m.Groups[3].Value} }}");
+        }
 
         var needAdmin = item.RequiresAdmin && !ElevationHelper.IsElevated();
 

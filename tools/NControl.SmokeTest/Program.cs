@@ -203,8 +203,8 @@ Check(restoreReg?.Contains("Remove-ItemProperty -Path 'HKCU:\\Software\\Test' -N
     "恢复生成器:注册表写入 -> 反向删除", restoreReg);
 
 var restoreSvc = RestoreCommandBuilder.Build(RestoreProbe("t.restore-svc", "Stop-Service SysMain -Force -ErrorAction SilentlyContinue; Set-Service SysMain -StartupType Disabled"));
-Check(restoreSvc?.Contains("Set-Service SysMain -StartupType Manual") == true,
-    "恢复生成器:服务禁用 -> 恢复手动启动", restoreSvc);
+Check(restoreSvc?.Contains("Set-Service SysMain -StartupType Automatic") == true && restoreSvc?.Contains("Start-Service SysMain") == true,
+    "恢复生成器:服务禁用 -> 恢复自动启动并启动", restoreSvc);
 
 var restoreHpet = RestoreCommandBuilder.Build(RestoreProbe("t.restore-hpet", "bcdedit /set useplatformclock false"));
 Check(restoreHpet?.Contains("bcdedit /deletevalue useplatformclock") == true,

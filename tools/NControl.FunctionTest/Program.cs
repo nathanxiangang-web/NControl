@@ -49,6 +49,49 @@ if (args.Contains("--probe"))
     return;
 }
 
+if (args.Contains("--cleanup"))
+{
+    // 清理全量测试残留:删除测试写入的键值,恢复系统默认(之前恢复逻辑静默失败留下的)
+    var cleanupSw = new StreamWriter(Path.Combine(AppContext.BaseDirectory, "cleanup_result.txt"), append: false, new UTF8Encoding(true));
+    var clog = new Action<string>(s => { Console.WriteLine(s); cleanupSw.WriteLine(s); cleanupSw.Flush(); });
+    var cleanItems = new (string Path, string Name)[]
+    {
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "AutoInstallMinorUpdates"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "ExcludeWUDriversInQualityUpdate"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\MRT", "DontOfferThroughWUAU"),
+        (@"HKLM:\SYSTEM\CurrentControlSet\Control", "PortableOperatingSystem"),
+        (@"HKCU:\Software\Microsoft\Notepad", "ShowStoreBanner"),
+        (@"HKCU:\Control Panel\Desktop", "AutoEndTasks"),
+        (@"HKCU:\Control Panel\Desktop", "HungAppTimeout"),
+        (@"HKCU:\Control Panel\Desktop", "WaitToKillAppTimeout"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\SQMClient\Windows", "CEIPEnable"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "DoNotShowFeedbackNotifications"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "DisableNetFrameworkTelemetry"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search", "BingSearchEnabled"),
+        (@"HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer", "DisablePreInstalledApps"),
+        (@"HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer", "AllowPagePrediction"),
+        (@"HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer", "EnableAutoTray"),
+        (@"HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowFrequent"),
+        (@"HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowRecent"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent", "DisableThirdPartySuggestions"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors", "DisableLocation"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsActivateWithVoice"),
+        (@"HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "DisableAutomaticRestartSignOn"),
+        (@"HKLM:\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\Local", "fBlockNonDomain")
+    };
+    foreach (var (path, name) in cleanItems)
+    {
+        var script = $"Remove-ItemProperty -Path '{path}' -Name '{name}' -ErrorAction SilentlyContinue; exit 0";
+        var ok = await RunPsSimpleAsync(script);
+        clog($"{(ok ? "OK" : "FAIL")} {path}\\{name}");
+    }
+    clog("DONE");
+    cleanupSw.Close();
+    return;
+}
+
 // 高风险项: 不真机执行,只验证命令/恢复命令存在
 var highRiskIds = new HashSet<string>
 {
@@ -142,11 +185,11 @@ static async Task<(bool Pass, bool Skipped, string Note)> TestOneAsync(
     var svcOps = new List<(string Name, string Action)>();
     foreach (Match m in Regex.Matches(cmd, @"(?:Set-Service|Stop-Service)\s+([A-Za-z0-9_]+)", RegexOptions.IgnoreCase))
         svcOps.Add((m.Groups[1].Value, m.Groups[0].Value.Split(' ')[0]));
-    var svcBackup = new List<(string Name, string? StartType, bool Existed)>();
+    var svcBackup = new List<(string Name, string? StartType, bool Existed, bool WasRunning)>();
     foreach (var (name, _) in svcOps.Distinct())
     {
         var svc = GetService(name);
-        svcBackup.Add((name, svc.StartType, svc.Exists));
+        svcBackup.Add((name, svc.StartType, svc.Exists, svc.WasRunning));
     }
 
     // 4) 执行
@@ -168,39 +211,84 @@ static async Task<(bool Pass, bool Skipped, string Note)> TestOneAsync(
     if (!allVerified)
         return (false, false, string.Join("; ", verifyNotes));
 
-    // 6) 恢复
+    // 6) 恢复:优先用 RestoreCommandBuilder 生成的命令(与 App 恢复按钮一致),再按备份写回
     var restoreNotes = new List<string>();
-    foreach (var (path, name, existed, value, type) in backup)
+    var restoreCmd = RestoreCommandBuilder.Build(item);
+    if (!string.IsNullOrWhiteSpace(restoreCmd))
     {
         try
         {
-            if (existed)
-            {
-                // 写回原值
-                var typeStr = type is string ts ? ts : "DWord";
-                var valStr = value is string s ? $"'{s}'" : (value is null ? "0" : value.ToString());
-                await RunPsAsync($"Set-ItemProperty -Path '{path}' -Name '{name}' -Value {valStr} -Type {typeStr} -Force");
-            }
-            else
-            {
-                await RunPsAsync($"Remove-ItemProperty -Path '{path}' -Name '{name}' -ErrorAction SilentlyContinue");
-            }
-            restoreNotes.Add($"{name}✓");
+            var rr = await provider.ExecuteAsync(
+                new FunctionItem
+                {
+                    Id = item.Id + ".restore", Name = "恢复:" + item.Name, Category = item.Category,
+                    Module = ModuleKind.Tools, Description = "", Risk = RiskLevel.Safe,
+                    RequiresAdmin = item.RequiresAdmin, Restart = RestartRequirement.None,
+                    Source = "测试", Kind = ExecutionKind.PowerShell, Command = restoreCmd
+                }, null, CancellationToken.None);
+            restoreNotes.Add(rr.Success ? "恢复✓" : $"恢复✗({rr.Error ?? "?"})");
         }
-        catch { restoreNotes.Add($"{name}✗"); }
+        catch (Exception ex) { restoreNotes.Add($"恢复✗({ex.Message})"); }
     }
-    foreach (var (name, startType, existed) in svcBackup)
+    else
+    {
+        // 无恢复命令时按备份写回(仅注册表写入点)
+        foreach (var (path, name, existed, value, type) in backup)
+        {
+            try
+            {
+                if (existed)
+                {
+                    var typeStr = type is string ts ? ts : "DWord";
+                    var valStr = value is string s ? $"'{s}'" : (value is null ? "0" : value.ToString());
+                    await RunPsAsync($"Set-ItemProperty -Path '{path}' -Name '{name}' -Value {valStr} -Type {typeStr} -Force");
+                }
+                else
+                {
+                    await RunPsAsync($"Remove-ItemProperty -Path '{path}' -Name '{name}' -ErrorAction SilentlyContinue");
+                }
+                restoreNotes.Add($"{name}✓");
+            }
+            catch { restoreNotes.Add($"{name}✗"); }
+        }
+    }
+
+    // 7) 恢复后验证:值不应再处于"优化写入后的状态"(允许:已删除=恢复默认,或写回原值)
+    var restoreOk = true;
+    foreach (var (path, name, existed, value, _) in backup)
+    {
+        var after = GetRegValue(path, name);
+        if (existed)
+        {
+            // 备份时值存在:恢复后应等于原值,或被删除(删除=恢复系统默认,同样可接受)
+            if (after.Exists && after.Value?.ToString() != value?.ToString())
+            { restoreOk = false; restoreNotes.Add($"{name}未复原({after.Value})"); }
+        }
+        else
+        {
+            // 备份时值不存在:恢复后应不存在
+            if (after.Exists) { restoreOk = false; restoreNotes.Add($"{name}仍残留"); }
+        }
+    }
+    foreach (var (name, startType, existed, wasRunning) in svcBackup)
     {
         try
         {
             if (existed && !string.IsNullOrEmpty(startType))
+            {
                 await RunPsAsync($"Set-Service {name} -StartupType {startType}");
+                if (wasRunning)
+                    await RunPsAsync($"Start-Service {name} -ErrorAction SilentlyContinue");
+            }
             restoreNotes.Add($"svc:{name}✓");
         }
         catch { restoreNotes.Add($"svc:{name}✗"); }
     }
 
-    return (true, false, $"写入验证OK,恢复OK({string.Join(",", restoreNotes)})");
+    var restoreSummary = string.Join(",", restoreNotes);
+    if (!restoreOk)
+        return (false, false, $"写入验证OK但恢复未复原: {restoreSummary}");
+    return (true, false, $"写入验证OK,恢复OK({restoreSummary})");
 }
 
 static (bool Exists, object? Value, object? Type) GetRegValue(string psPath, string name)
@@ -226,9 +314,9 @@ static (bool Exists, object? Value, object? Type) GetRegValue(string psPath, str
     return (false, null, null);
 }
 
-static (string? StartType, bool Exists) GetService(string name)
+static (string? StartType, bool Exists, bool WasRunning) GetService(string name)
 {
-    var script = $"try {{ $s=Get-Service {name} -ErrorAction Stop; [Console]::WriteLine($s.StartType) }} catch {{ [Console]::WriteLine('MISSING') }}";
+    var script = $"try {{ $s=Get-Service {name} -ErrorAction Stop; [Console]::WriteLine($s.StartType + '|' + $s.Status) }} catch {{ [Console]::WriteLine('MISSING') }}";
     var psi = new ProcessStartInfo
     {
         FileName = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"),
@@ -241,7 +329,9 @@ static (string? StartType, bool Exists) GetService(string name)
     using var p = Process.Start(psi)!;
     var outp = p.StandardOutput.ReadToEnd().Trim();
     p.WaitForExit(10000);
-    return outp == "MISSING" ? (null, false) : (outp, true);
+    if (outp == "MISSING") return (null, false, false);
+    var parts = outp.Split('|');
+    return (parts.Length > 0 ? parts[0] : null, true, parts.Length > 1 && parts[1] == "Running");
 }
 
 static async Task RunPsAsync(string script)
@@ -309,25 +399,42 @@ static async Task DiagAsync()
     new OptimizationModuleRegistrar().RegisterFeatures(catalog);
     var provider = new PowerShellExecutionProvider(NullLogger<PowerShellExecutionProvider>.Instance);
 
-    foreach (var id in new[] { "update.block-feature-updates" })
+    foreach (var id in new[] { "privacy.disable-sms-router", "perf.disable-remote-registry", "perf.disable-homegroup" })
     {
         var item = catalog.Find(id)!;
         log($"=== {item.Name} ===");
-        // 手动复现 provider 注入,打印最终脚本
+        // 打印注入后的最终脚本
         var script = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; " + item.Command!;
         var reWrite = new System.Text.RegularExpressions.Regex(@"Set-ItemProperty\s+-Path\s+'([^']+)'");
         script = reWrite.Replace(script, m => $"if (-not (Test-Path '{m.Groups[1].Value}')) {{ New-Item -Path '{m.Groups[1].Value}' -Force | Out-Null }}; Set-ItemProperty -Path '{m.Groups[1].Value}'");
-        log("脚本: " + script);
-        try
-        {
-            var r = await provider.ExecuteAsync(item, null, CancellationToken.None);
-            log($"Success={r.Success} Exit={r.ExitCode}");
-            log($"Error: {r.Error ?? "(null)"}");
-        }
-        catch (Exception ex) { log($"异常: {ex}"); }
+        var reSvc = new System.Text.RegularExpressions.Regex(@"(Set-Service|Stop-Service)\s+([A-Za-z0-9_]+)([^;]*)");
+        script = reSvc.Replace(script, m => $"if (Get-Service {m.Groups[2].Value} -ErrorAction SilentlyContinue) {{ {m.Groups[1].Value} {m.Groups[2].Value}{m.Groups[3].Value} }}");
+        log("注入后: " + script);
         log("");
     }
     sw.Close();
 }
 
 
+
+// ---------- 简单 PowerShell 执行(清理用) ----------
+static async Task<bool> RunPsSimpleAsync(string script)
+{
+    var psi = new ProcessStartInfo
+    {
+        FileName = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"),
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+        CreateNoWindow = true,
+        StandardOutputEncoding = Encoding.UTF8,
+        StandardErrorEncoding = Encoding.UTF8
+    };
+    psi.ArgumentList.Add("-NoProfile");
+    psi.ArgumentList.Add("-NonInteractive");
+    psi.ArgumentList.Add("-Command");
+    psi.ArgumentList.Add("[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; " + script);
+    using var p = Process.Start(psi)!;
+    await p.WaitForExitAsync();
+    return p.ExitCode == 0;
+}

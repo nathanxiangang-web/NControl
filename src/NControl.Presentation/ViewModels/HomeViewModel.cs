@@ -10,10 +10,12 @@ namespace NControl.Presentation.ViewModels;
 public partial class HomeViewModel : ObservableObject, IRefreshable
 {
     private readonly ITaskRecordStore _store;
+    private readonly NavigationService _nav;
 
     public HomeViewModel(ITaskRecordStore store, NavigationService nav)
     {
         _store = store;
+        _nav = nav;
 
         QuickCards.Add(new QuickCardViewModel(
             "推荐优化", "关闭广告与推荐,调整任务栏、资源管理器和常用系统设置。", "查看推荐方案 →", "\uE945",
@@ -43,6 +45,12 @@ public partial class HomeViewModel : ObservableObject, IRefreshable
     public ObservableCollection<QuickCardViewModel> QuickCards { get; } = new();
     public ObservableCollection<ToolCardViewModel> ToolCards { get; } = new();
     public ObservableCollection<ActivityRowViewModel> Recent { get; } = new();
+
+    [RelayCommand]
+    private void NavigateToOptimize() => _nav.Navigate("optimize", null);
+
+    [RelayCommand]
+    private void NavigateToRepair() => _nav.Navigate("repair", null);
 
     public void Refresh() => _ = LoadRecentAsync();
 

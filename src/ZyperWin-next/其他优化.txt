@@ -1,0 +1,9 @@
+1、32G以上关闭内存压缩
+Get-MMAgent查看是否打开内存压缩
+Disable-MMAgent -mc关闭内存压缩
+2、程序-功能
+启用.NET3.5
+3、好看的壁纸网站推荐https://haowallpaper.com/
+4、自建远程放心使用
+服务器：  luomup.fun
+Key: hs7Tl6fqbL9hHWV6a6w1AnsSgmMRFKfSvbMfHBjC6EI=

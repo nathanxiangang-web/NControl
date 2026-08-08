@@ -12,6 +12,17 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
 
     public void RegisterFeatures(IFunctionCatalog catalog)
     {
+        // 基础功能(第一代核心)
+        RegisterBaseFeatures(catalog);
+        // ZyperWin++ 功能池适配(2026-08-02 数据)
+        OptimizationFeaturesExplorer.Register(catalog);
+        OptimizationFeaturesPerformance.Register(catalog);
+        OptimizationFeaturesPrivacy.Register(catalog);
+        OptimizationFeaturesSecurity.Register(catalog);
+    }
+
+    private void RegisterBaseFeatures(IFunctionCatalog catalog)
+    {
         // ---------- 任务栏与开始菜单 ----------
         catalog.Register(F("taskbar.hide-search", "隐藏任务栏搜索框", "任务栏与开始菜单",
             "隐藏任务栏上的搜索框,保留搜索功能本身。", RiskLevel.Safe, false, RestartRequirement.None,
@@ -137,7 +148,8 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
                 "taskbar.hide-search", "taskbar.hide-widgets", "taskbar.hide-copilot",
                 "start.disable-recommendations", "privacy.disable-ads-id",
                 "privacy.disable-lock-screen-tips", "explorer.show-extensions",
-                "performance.disable-transparency"
+                "performance.disable-transparency",
+                "explorer.notepad-wrap", "taskbar.clock-show-seconds", "explorer.quick-access-no-recent"
             }
         });
 
@@ -159,7 +171,15 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
                 "taskbar.hide-chat", "taskbar.hide-taskview", "taskbar.align-left",
                 "explorer.open-this-pc", "explorer.show-hidden",
                 "privacy.disable-settings-suggestions", "privacy.disable-tailored-experiences",
-                "privacy.disable-welcome-experience", "gaming.disable-game-dvr", "gaming.disable-game-bar"
+                "privacy.disable-welcome-experience", "gaming.disable-game-dvr", "gaming.disable-game-bar",
+                // ZyperWin++ 适配补充(仅安全/推荐级)
+                "taskbar.show-all-tray-icons", "taskbar.merge-buttons-always",
+                "explorer.foreground-responsiveness", "explorer.disable-autoplay", "explorer.no-recent-docs-history",
+                "perf.disable-lock-spotlight", "perf.disable-tips", "perf.disable-silent-installs",
+                "perf.disable-remote-assistance", "perf.disable-search-web",
+                "privacy.disable-bing-search", "privacy.disable-search-history",
+                "privacy.disable-preinstalled-apps", "privacy.disable-inking-personalization",
+                "edge.no-background-apps", "edge.hide-news-feed", "edge.block-bing-ads"
             }
         });
 
@@ -189,7 +209,21 @@ public sealed class OptimizationModuleRegistrar : IModuleRegistrar
                 "advanced.disable-sysmain", "advanced.disable-diagtrack", "advanced.disable-wsearch",
                 // 常用清理与预装应用(跨模块引用)
                 "cleanup.user-temp", "cleanup.thumbnails", "cleanup.recycle-bin",
-                "apps.clipchamp", "apps.bing-news", "apps.bing-weather", "apps.solitaire"
+                "apps.clipchamp", "apps.bing-news", "apps.bing-weather", "apps.solitaire",
+                // ZyperWin++ 适配补充(谨慎级)
+                "explorer.unload-unused-dlls", "explorer.remove-duplicate-drives",
+                "perf.disable-store-auto-update", "perf.disable-cortana", "perf.fast-shutdown",
+                "perf.shorter-service-timeout", "perf.disable-diagnostics-service",
+                "perf.disable-error-reporting-service", "perf.disable-ntfs-link-tracking",
+                "perf.disable-auto-maintenance", "perf.disable-low-disk-warning",
+                "perf.disable-pca", "perf.disable-reserved-storage",
+                "system.disable-hibernation", "system.disable-device-restore-point",
+                "system.disable-msi-restore-point", "system.no-crash-dump",
+                "update.block-feature-updates",
+                "edge.hide-first-run", "edge.disable-startup-boost", "edge.hide-top-sites",
+                "edge.hide-sidebar", "edge.no-diagnostic-data", "edge.disable-personalized-ads",
+                "privacy.disable-telemetry", "privacy.disable-location",
+                "privacy.disable-sms-router", "privacy.deny-file-system-access"
             }
         });
     }

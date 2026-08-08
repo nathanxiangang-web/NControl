@@ -43,7 +43,7 @@ foreach (var r in registrars) r.RegisterFeatures(catalog);
 foreach (var r in registrars) r.RegisterPresets(catalog);
 
 Console.WriteLine($"功能目录: {catalog.All.Count} 项, 方案: {catalog.Presets.Count} 个");
-Check(catalog.All.Count >= 50, "功能目录不少于 50 项", $"实际 {catalog.All.Count}");
+Check(catalog.All.Count >= 150, "功能目录不少于 150 项", $"实际 {catalog.All.Count}");
 Check(catalog.Presets.Count >= 4, "方案不少于 4 个", $"实际 {catalog.Presets.Count}");
 
 // 每个功能项字段完整
@@ -149,6 +149,13 @@ Check(recent.Count >= 1 && recent[0].Id == record.Id, "最近记录可读回且�
 Check(recent[0].Items.Count == 3, "记录明细完整(3 项)");
 var all = await store.GetAllAsync();
 Check(all.Count == recent.Count && all[0].Id == record.Id, "全部记录可枚举");
+
+// 高级分类治理:该分类下不允许安全/推荐级功能(文档 §6.3 高级区域;谨慎级服务项可在此,但不进预设)
+var advancedNonHighRisk = catalog.ByModule(ModuleKind.Optimization)
+    .Where(f => f.Category == "高级" && f.Risk is RiskLevel.Safe or RiskLevel.Recommended)
+    .Select(f => $"{f.Id}:{f.Risk}")
+    .ToArray();
+Check(advancedNonHighRisk.Length == 0, "高级分类不含安全/推荐级功能", string.Join(",", advancedNonHighRisk));
 
 // 搜索
 Check(catalog.Search("SysMain").Any(f => f.Id == "advanced.disable-sysmain"), "搜索可命中功能");

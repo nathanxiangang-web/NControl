@@ -1,0 +1,132 @@
+<UserControl x:Class="NControl.Presentation.Views.ExecutionDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:NControl.Presentation">
+    <Border Width="640" Background="White" CornerRadius="22" Padding="0">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="40" ShadowDepth="6" Opacity="0.35" Color="#12192C" />
+        </Border.Effect>
+        <StackPanel>
+            <!-- 标题 -->
+            <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="20,0" Height="64">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <Button Grid.Column="1" Content="✕" Style="{StaticResource GhostButton}" Width="34" Height="34"
+                            Command="{Binding CloseCommand}" />
+                </Grid>
+            </Border>
+
+            <StackPanel Margin="22,20,22,22">
+
+                <!-- 高风险警示(确认阶段) -->
+                <Border Background="{StaticResource DangerSoftBrush}" CornerRadius="12" Padding="14,12" Margin="0,0,0,14"
+                        Visibility="{Binding HasHighRisk, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}">
+                    <TextBlock Foreground="{StaticResource DangerBrush}" FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap"
+                               Text="本任务包含高风险项目(可能降低安全性、更新能力或稳定性)。确认后仍将执行,请谨慎操作。" />
+                </Border>
+
+                <!-- 确认清单 -->
+                <StackPanel Visibility="{Binding CurrentPhase, Converter={x:Static conv:PhaseEqualsToVisibilityConverter.Instance}, ConverterParameter=Confirm}">
+                    <TextBlock Text="以下功能将被执行:" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10" />
+                    <Border Background="{StaticResource PanelSoftBrush}" CornerRadius="12" Padding="14,10" MaxHeight="300">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Rows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,3">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12.5" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Item.RequiresAdmin, Converter={x:Static conv:AdminToTextConverter.Instance}}"
+                                                       Style="{StaticResource SubtleText}" Margin="12,0,0,0" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                    <Button Content="确认执行" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" Margin="0,16,0,0"
+                            Command="{Binding StartCommand}" />
+                </StackPanel>
+
+                <!-- 执行进度 -->
+                <StackPanel Visibility="{Binding CurrentPhase, Converter={x:Static conv:PhaseEqualsToVisibilityConverter.Instance}, ConverterParameter=Running}">
+                    <Border CornerRadius="999" Height="10" Background="#ECEFF5">
+                        <Border CornerRadius="999" Background="{StaticResource PrimaryGradientBrush}" HorizontalAlignment="Left">
+                            <Border.Width>
+                                <MultiBinding Converter="{x:Static conv:PercentToWidthMultiConverter.Instance}">
+                                    <Binding Path="ProgressPercent" />
+                                    <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Border}" />
+                                </MultiBinding>
+                            </Border.Width>
+                        </Border>
+                    </Border>
+                    <Grid Margin="0,8,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding ProgressText}" Style="{StaticResource SubtleText}" />
+                        <TextBlock Grid.Column="1" Text="{Binding ProgressPercent, StringFormat={}{0:0}%}" Style="{StaticResource SubtleText}" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="26" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="22" Height="22" CornerRadius="11"
+                                            Background="{StaticResource NeutralSoftBrush}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding StatusGlyph}" FontSize="11" FontWeight="Bold"
+                                                   Foreground="{Binding StatusBrush}" HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12.5" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 输出日志 -->
+                    <Border Background="#F6F8FB" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                            CornerRadius="13" Padding="12" Margin="0,14,0,0" MaxHeight="150">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                            <TextBlock Text="{Binding LogText}" FontFamily="Consolas" FontSize="11.5"
+                                       Foreground="#5D6676" TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <Button Content="停止后续任务" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding StopCommand}" IsEnabled="{Binding IsRunning}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 完成 -->
+                <StackPanel Visibility="{Binding CurrentPhase, Converter={x:Static conv:PhaseEqualsToVisibilityConverter.Instance}, ConverterParameter=Done}">
+                    <Border Background="{StaticResource SuccessSoftBrush}" CornerRadius="12" Padding="16,14">
+                        <StackPanel>
+                            <TextBlock Text="执行完成" FontSize="15" FontWeight="SemiBold"
+                                       Foreground="{StaticResource SuccessBrush}" />
+                            <TextBlock Text="{Binding SummaryText}" Style="{StaticResource MutedText}" Margin="0,6,0,0"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <Button Content="完成" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" Margin="0,16,0,0"
+                            Command="{Binding CloseCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

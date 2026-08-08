@@ -1,0 +1,7 @@
+<UserControl x:Class="NControl.Presentation.Controls.RiskPill"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border x:Name="Root" Style="{StaticResource Pill}" Background="{StaticResource SuccessSoftBrush}">
+        <TextBlock x:Name="Txt" Foreground="{StaticResource SuccessBrush}" FontSize="11" FontWeight="Bold" Text="安全" />
+    </Border>
+</UserControl>

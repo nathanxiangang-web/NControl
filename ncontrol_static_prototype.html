@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NControl · Windows 控制中心</title>
+  <style>
+    :root {
+      --bg: #f4f6fa;
+      --panel: rgba(255,255,255,.82);
+      --panel-solid: #ffffff;
+      --panel-soft: #f7f9fc;
+      --line: #e6eaf0;
+      --line-strong: #d8dee8;
+      --text: #182033;
+      --muted: #697386;
+      --subtle: #929bad;
+      --primary: #5b5ce2;
+      --primary-2: #7a67f8;
+      --primary-soft: #ececff;
+      --success: #2fa36b;
+      --success-soft: #e9f8f0;
+      --warning: #d98916;
+      --warning-soft: #fff4df;
+      --danger: #d64e4e;
+      --danger-soft: #ffeded;
+      --shadow: 0 18px 45px rgba(38, 48, 74, .11);
+      --radius-xl: 22px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --sidebar: 228px;
+      --topbar: 68px;
+      --bottom: 74px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(122,103,248,.11), transparent 28%),
+        radial-gradient(circle at 100% 0%, rgba(61,154,255,.09), transparent 26%),
+        var(--bg);
+      overflow: hidden;
+    }
+
+    button, input { font: inherit; }
+    button { border: 0; cursor: pointer; }
+
+    .app {
+      width: min(1460px, calc(100vw - 26px));
+      height: min(920px, calc(100vh - 26px));
+      margin: 13px auto;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(255,255,255,.92);
+      box-shadow: var(--shadow);
+      border-radius: 24px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: var(--sidebar) 1fr;
+      position: relative;
+      backdrop-filter: blur(24px);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      padding: 18px 14px 14px;
+      background: rgba(250,251,254,.76);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .brand {
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 10px;
+      margin-bottom: 12px;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: linear-gradient(140deg, var(--primary), #8b78ff);
+      position: relative;
+      box-shadow: 0 10px 24px rgba(91,92,226,.28);
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      border-radius: 5px;
+      background: rgba(255,255,255,.94);
+    }
+    .brand-mark::before { width: 10px; height: 22px; left: 8px; top: 7px; }
+    .brand-mark::after { width: 10px; height: 14px; right: 8px; top: 11px; opacity: .72; }
+
+    .brand strong { display: block; font-size: 17px; letter-spacing: .1px; }
+    .brand span { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+    .nav-section-title {
+      font-size: 11px;
+      color: var(--subtle);
+      padding: 8px 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .nav { display: flex; flex-direction: column; gap: 5px; }
+    .nav-button {
+      width: 100%;
+      height: 44px;
+      border-radius: 12px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      background: transparent;
+      color: #4e586d;
+      text-align: left;
+      transition: .2s ease;
+      position: relative;
+    }
+    .nav-button:hover { background: rgba(91,92,226,.07); color: var(--text); }
+    .nav-button.active { background: var(--primary-soft); color: var(--primary); font-weight: 650; }
+    .nav-button.active::before {
+      content: "";
+      position: absolute;
+      left: -14px;
+      height: 24px;
+      width: 3px;
+      border-radius: 999px;
+      background: var(--primary);
+    }
+
+    .icon {
+      width: 20px;
+      height: 20px;
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+    .icon svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    .sidebar-bottom { margin-top: auto; border-top: 1px solid var(--line); padding-top: 10px; }
+
+    .main {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: var(--topbar) 1fr;
+      background: rgba(255,255,255,.52);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 26px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.67);
+      backdrop-filter: blur(18px);
+      z-index: 3;
+    }
+
+    .page-heading { min-width: 0; }
+    .page-heading h1 { margin: 0; font-size: 20px; font-weight: 730; }
+    .page-heading p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .search {
+      width: 310px;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-solid);
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 12px;
+      color: var(--subtle);
+      box-shadow: 0 4px 12px rgba(32,46,72,.04);
+    }
+    .search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); }
+
+    .circle-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--panel-solid);
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+    }
+
+    .content {
+      overflow: auto;
+      padding: 24px 26px 30px;
+      scrollbar-width: thin;
+      scrollbar-color: #c9ced8 transparent;
+    }
+
+    .page { display: none; animation: fade .22s ease; }
+    .page.active { display: block; }
+    @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .hero {
+      border: 1px solid rgba(111,99,244,.14);
+      background:
+        linear-gradient(100deg, rgba(255,255,255,.97), rgba(247,247,255,.96)),
+        var(--panel-solid);
+      border-radius: var(--radius-xl);
+      padding: 26px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      overflow: hidden;
+      position: relative;
+    }
+    .hero::after {
+      content: "";
+      width: 260px;
+      height: 260px;
+      position: absolute;
+      right: -90px;
+      top: -120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(91,92,226,.17), rgba(91,92,226,0));
+    }
+    .hero-copy { position: relative; z-index: 1; }
+    .eyebrow { color: var(--primary); font-size: 12px; font-weight: 700; letter-spacing: .04em; margin-bottom: 7px; }
+    .hero h2 { margin: 0; font-size: 27px; letter-spacing: -.02em; }
+    .hero p { margin: 9px 0 0; color: var(--muted); font-size: 14px; max-width: 620px; line-height: 1.7; }
+    .hero-actions { display: flex; gap: 10px; margin-top: 18px; }
+
+    .primary-btn, .secondary-btn, .ghost-btn {
+      height: 40px;
+      padding: 0 16px;
+      border-radius: 11px;
+      font-weight: 650;
+      transition: .2s ease;
+    }
+    .primary-btn { background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; box-shadow: 0 9px 22px rgba(91,92,226,.24); }
+    .primary-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(91,92,226,.32); }
+    .secondary-btn { background: var(--panel-solid); color: var(--text); border: 1px solid var(--line-strong); }
+    .ghost-btn { background: transparent; color: var(--primary); }
+
+    .hero-art {
+      width: 210px;
+      height: 130px;
+      border-radius: 24px;
+      background: linear-gradient(145deg, #4f53d7, #8d79ff);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 18px 42px rgba(91,92,226,.28);
+      flex: 0 0 auto;
+    }
+    .hero-art .window {
+      position: absolute;
+      background: rgba(255,255,255,.92);
+      border-radius: 10px;
+      box-shadow: 0 12px 25px rgba(16,24,56,.2);
+    }
+    .hero-art .window.one { width: 120px; height: 82px; left: 22px; top: 30px; transform: rotate(-5deg); }
+    .hero-art .window.two { width: 100px; height: 68px; right: 14px; top: 16px; transform: rotate(7deg); background: rgba(255,255,255,.82); }
+    .hero-art .window::before { content: ""; display: block; height: 12px; border-bottom: 1px solid rgba(41,48,86,.1); }
+    .hero-art .window::after { content: ""; position: absolute; left: 13px; right: 13px; top: 28px; height: 28px; background: linear-gradient(#e9ebff 0 0) 0 0/70% 6px no-repeat, linear-gradient(#eef0f6 0 0) 0 13px/100% 6px no-repeat, linear-gradient(#eef0f6 0 0) 0 26px/85% 6px no-repeat; }
+
+    .section-title {
+      margin: 26px 0 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+    }
+    .section-title h3 { margin: 0; font-size: 16px; }
+    .section-title span { color: var(--muted); font-size: 12px; }
+
+    .grid-2, .grid-3, .grid-4 { display: grid; gap: 14px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+
+    .feature-card,
+    .tool-card,
+    .setting-card,
+    .preset-card,
+    .repair-card,
+    .summary-card {
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 7px 18px rgba(38,48,74,.045);
+    }
+
+    .feature-card { padding: 18px; min-height: 140px; display: flex; flex-direction: column; }
+    .feature-card .card-icon, .repair-card .card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      color: var(--primary);
+      background: var(--primary-soft);
+      margin-bottom: 14px;
+    }
+    .feature-card h4, .repair-card h4 { margin: 0; font-size: 15px; }
+    .feature-card p, .repair-card p { margin: 8px 0 14px; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+    .card-link { margin-top: auto; color: var(--primary); font-size: 12.5px; font-weight: 650; }
+
+    .tool-card { padding: 15px; display: flex; align-items: center; gap: 12px; min-height: 74px; }
+    .tool-card .mini-icon { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: var(--panel-soft); color: var(--primary); }
+    .tool-card strong { display: block; font-size: 13.5px; }
+    .tool-card span { display: block; margin-top: 3px; font-size: 11.5px; color: var(--muted); }
+
+    .activity {
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .activity-row { min-height: 58px; display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+    .activity-row:last-child { border-bottom: 0; }
+    .status-dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--success-soft); color: var(--success); font-size: 13px; font-weight: 800; }
+    .activity-row strong { font-size: 13px; }
+    .activity-row small { color: var(--muted); font-size: 11.5px; }
+    .pill { padding: 5px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .pill.success { color: var(--success); background: var(--success-soft); }
+    .pill.warn { color: var(--warning); background: var(--warning-soft); }
+    .pill.danger { color: var(--danger); background: var(--danger-soft); }
+    .pill.primary { color: var(--primary); background: var(--primary-soft); }
+    .pill.neutral { color: #667085; background: #f1f3f6; }
+
+    .preset-card { padding: 18px 18px 16px; display: grid; grid-template-columns: 1fr auto; gap: 10px 18px; margin-bottom: 12px; }
+    .preset-card h4 { margin: 0; font-size: 15px; }
+    .preset-card p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+    .preset-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; color: var(--muted); font-size: 11.5px; }
+    .preset-actions { grid-row: 1 / span 3; grid-column: 2; display: flex; flex-direction: column; align-items: end; justify-content: space-between; }
+
+    .category-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .chip { height: 34px; padding: 0 13px; border-radius: 999px; background: var(--panel-solid); border: 1px solid var(--line); color: var(--muted); }
+    .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .setting-group-title { margin: 18px 0 10px; font-size: 14px; }
+    .setting-card { padding: 15px 16px; display: grid; grid-template-columns: 1fr auto; gap: 8px 18px; margin-bottom: 10px; }
+    .setting-card h4 { margin: 0; font-size: 13.5px; }
+    .setting-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .setting-card .meta { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+    .switch { width: 42px; height: 24px; border-radius: 999px; background: #d9dee8; position: relative; align-self: center; transition: .2s ease; }
+    .switch::after { content: ""; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; left: 3px; top: 3px; box-shadow: 0 2px 5px rgba(0,0,0,.18); transition: .2s ease; }
+    .switch.on { background: var(--primary); }
+    .switch.on::after { left: 21px; }
+
+    .app-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+    .tabs { display: flex; gap: 6px; padding: 4px; border-radius: 12px; background: #edf0f6; }
+    .tab { height: 32px; padding: 0 13px; border-radius: 9px; background: transparent; color: var(--muted); }
+    .tab.active { background: #fff; color: var(--text); box-shadow: 0 3px 8px rgba(38,48,74,.08); font-weight: 650; }
+
+    .app-list { background: var(--panel-solid); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+    .app-row { min-height: 66px; display: grid; grid-template-columns: 34px 42px 1.3fr 1fr 100px 110px; gap: 12px; align-items: center; padding: 0 16px; border-bottom: 1px solid var(--line); }
+    .app-row:last-child { border-bottom: 0; }
+    .checkbox { width: 18px; height: 18px; border: 1.5px solid #c9d0db; border-radius: 5px; }
+    .app-icon { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; color: var(--primary); background: var(--primary-soft); font-weight: 800; }
+    .app-row strong { font-size: 13px; }
+    .app-row span { font-size: 11.5px; color: var(--muted); }
+
+    .repair-card { padding: 18px; min-height: 180px; display: flex; flex-direction: column; }
+    .repair-card .secondary-btn { margin-top: auto; align-self: flex-start; }
+
+    .network-panel { padding: 16px; background: var(--panel-solid); border: 1px solid var(--line); border-radius: var(--radius-lg); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .network-action { padding: 14px 10px; border-radius: 12px; background: var(--panel-soft); text-align: center; }
+    .network-action strong { display: block; font-size: 12.5px; }
+    .network-action button { margin-top: 10px; color: var(--primary); background: transparent; font-weight: 700; }
+
+    .bottom-bar {
+      position: absolute;
+      left: var(--sidebar);
+      right: 0;
+      bottom: 0;
+      height: var(--bottom);
+      border-top: 1px solid var(--line);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(18px);
+      padding: 0 26px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 4;
+    }
+    .bottom-bar.show { display: flex; }
+    .bottom-bar strong { font-size: 13px; }
+    .bottom-bar span { color: var(--muted); font-size: 12px; margin-left: 8px; }
+    .bottom-actions { display: flex; gap: 10px; }
+    .has-bottom .content { padding-bottom: 96px; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20,27,45,.35);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      width: min(640px, calc(100vw - 34px));
+      background: #fff;
+      border: 1px solid rgba(255,255,255,.8);
+      border-radius: 22px;
+      box-shadow: 0 30px 80px rgba(18,25,44,.28);
+      overflow: hidden;
+    }
+    .modal-head { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--line); }
+    .modal-head h3 { margin: 0; font-size: 16px; }
+    .modal-close { width: 34px; height: 34px; border-radius: 10px; background: var(--panel-soft); color: var(--muted); }
+    .modal-body { padding: 22px; }
+    .progress-track { height: 10px; border-radius: 999px; background: #eceff5; overflow: hidden; }
+    .progress-bar { height: 100%; width: 68%; background: linear-gradient(90deg, var(--primary), var(--primary-2)); border-radius: inherit; }
+    .progress-meta { display: flex; justify-content: space-between; margin: 8px 0 18px; color: var(--muted); font-size: 12px; }
+    .task-list { display: grid; gap: 9px; }
+    .task { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: center; font-size: 12.5px; }
+    .task-state { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #f0f2f6; color: #a2a9b7; }
+    .task.done .task-state { background: var(--success-soft); color: var(--success); }
+    .task.current .task-state { background: var(--primary-soft); color: var(--primary); }
+    .log-box { margin-top: 18px; background: #f6f8fb; border: 1px solid var(--line); border-radius: 13px; padding: 12px; color: #5d6676; font: 11.5px/1.7 Consolas, monospace; }
+    .modal-foot { padding: 0 22px 20px; display: flex; justify-content: flex-end; gap: 10px; }
+
+    .compact-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .compact-title h2 { margin: 0; font-size: 20px; }
+    .compact-title p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+
+    @media (max-width: 1050px) {
+      :root { --sidebar: 198px; }
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .search { width: 240px; }
+      .hero-art { display: none; }
+      .app-row { grid-template-columns: 32px 40px 1.5fr 1fr 80px; }
+      .app-row > :nth-child(4) { display: none; }
+    }
+
+    @media (max-width: 780px) {
+      body { overflow: auto; }
+      .app { width: 100%; height: auto; min-height: 100vh; margin: 0; border-radius: 0; grid-template-columns: 76px 1fr; }
+      :root { --sidebar: 76px; }
+      .brand div:last-child, .nav-button span, .nav-section-title { display: none; }
+      .brand { justify-content: center; padding: 0; }
+      .nav-button { justify-content: center; padding: 0; }
+      .topbar { padding: 0 14px; }
+      .page-heading p { display: none; }
+      .search { width: 180px; }
+      .content { padding: 16px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .hero { padding: 20px; }
+      .network-panel { grid-template-columns: repeat(2, 1fr); }
+      .bottom-bar { left: 76px; padding: 0 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <strong>NControl</strong>
+          <span>Windows 控制中心</span>
+        </div>
+      </div>
+
+      <div class="nav-section-title">主要功能</div>
+      <nav class="nav">
+        <button class="nav-button active" data-page="home">
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9 21v-7h6v7"/></svg></span><span>首页</span>
+        </button>
+        <button class="nav-button" data-page="optimize">
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M12 3v3"/><path d="m18.4 5.6-2.1 2.1"/><path d="M21 12h-3"/><path d="m18.4 18.4-2.1-2.1"/><path d="M12 21v-3"/><path d="m5.6 18.4 2.1-2.1"/><path d="M3 12h3"/><path d="m5.6 5.6 2.1 2.1"/><circle cx="12" cy="12" r="4"/></svg></span><span>一键优化</span>
+        </button>
+        <button class="nav-button" data-page="settings">
+          <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .4 2l.1.1-2.8 2.8-.1-.1a1.8 1.8 0 0 0-2-.4 1.8 1.8 0 0 0-1 1.6V21h-4v-.1A1.8 1.8 0 0 0 9 19.3a1.8 1.8 0 0 0-2 .4l-.1.1-2.8-2.8.1-.1a1.8 1.8 0 0 0 .4-2A1.8 1.8 0 0 0 3 14H3v-4h.1A1.8 1.8 0 0 0 4.7 9a1.8 1.8 0 0 0-.4-2l-.1-.1 2.8-2.8.1.1a1.8 1.8 0 0 0 2 .4A1.8 1.8 0 0 0 10 3.1V3h4v.1a1.8 1.8 0 0 0 1 1.6 1.8 1.8 0 0 0 2-.4l.1-.1 2.8 2.8-.1.1a1.8 1.8 0 0 0-.4 2A1.8 1.8 0 0 0 21 10h.1v4H21a1.8 1.8 0 0 0-1.6 1Z"/></svg></span><span>系统设置</span>
+        </button>
+        <button class="nav-button" data-page="apps">
+          <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></span><span>应用管理</span>
+        </button>
+        <button class="nav-button" data-page="cleanup">
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 14h10l1-14"/><path d="M10 11v6M14 11v6"/></svg></span><span>清理维护</span>
+        </button>
+        <button class="nav-button" data-page="repair">
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-3-3 2.4-2.4Z"/><path d="m15 15 5 5"/></svg></span><span>系统修复</span>
+        </button>
+        <button class="nav-button" data-page="tools">
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span><span>实用工具</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom nav">
+        <button class="nav-button"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><span>任务记录</span></button>
+        <button class="nav-button"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.5 1A7 7 0 0 0 14.8 6L14.5 3h-5L9.2 6A7 7 0 0 0 7.6 7.1l-2.5-1-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.5-1A7 7 0 0 0 9.2 18l.3 3h5l.3-3a7 7 0 0 0 1.6-1.1l2.5 1 2-3.4-2-1.5a7 7 0 0 0 .1-1Z"/></svg></span><span>设置</span></button>
+        <button class="nav-button"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span><span>关于</span></button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="page-heading">
+          <h1 id="pageTitle">首页</h1>
+          <p id="pageDesc">集中管理 Windows 的优化、精简、修复与常用工具</p>
+        </div>
+        <div class="top-actions">
+          <label class="search">
+            <span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>
+            <input placeholder="搜索功能、设置或工具" />
+          </label>
+          <button class="circle-btn" title="通知"><span class="icon"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span></button>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="page active" id="home">
+          <div class="hero">
+            <div class="hero-copy">
+              <div class="eyebrow">WINDOWS CONTROL CENTER</div>
+              <h2>早上好，Nathan</h2>
+              <p>把零散的系统优化、应用精简、清理维护和故障修复，集中到一个清晰、可信的入口中。</p>
+              <div class="hero-actions">
+                <button class="primary-btn" data-jump="optimize">开始推荐优化</button>
+                <button class="secondary-btn" data-jump="repair">打开系统修复</button>
+              </div>
+            </div>
+            <div class="hero-art" aria-hidden="true">
+              <div class="window one"></div><div class="window two"></div>
+            </div>
+          </div>
+
+          <div class="section-title"><h3>快速开始</h3><span>第一代以功能入口为主，不展示虚假健康评分</span></div>
+          <div class="grid-4">
+            <article class="feature-card">
+              <div class="card-icon"><span class="icon"><svg viewBox="0 0 24 24"><path d="M12 3v3M18.4 5.6l-2.1 2.1M21 12h-3M18.4 18.4l-2.1-2.1M12 21v-3M5.6 18.4l2.1-2.1M3 12h3M5.6 5.6l2.1 2.1"/><circle cx="12" cy="12" r="4"/></svg></span></div>
+              <h4>推荐优化</h4><p>关闭广告与推荐，调整任务栏、资源管理器和常用系统设置。</p><span class="card-link">12 个推荐项目 →</span>
+            </article>
+            <article class="feature-card">
+              <div class="card-icon"><span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></span></div>
+              <h4>系统精简</h4><p>集中管理常见预装应用、可选组件和不需要的系统功能。</p><span class="card-link">自定义选择 →</span>
+            </article>
+            <article class="feature-card">
+              <div class="card-icon"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg></span></div>
+              <h4>清理空间</h4><p>清理系统临时文件、缓存、日志和常见无用内容。</p><span class="card-link">开始清理 →</span>
+            </article>
+            <article class="feature-card">
+              <div class="card-icon"><span class="icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-3-3 2.4-2.4Z"/></svg></span></div>
+              <h4>系统修复</h4><p>运行 DISM、SFC、更新修复和常见网络修复工具。</p><span class="card-link">查看修复工具 →</span>
+            </article>
+          </div>
+
+          <div class="section-title"><h3>常用工具</h3><span>快速入口</span></div>
+          <div class="grid-4">
+            <div class="tool-card"><div class="mini-icon">⌁</div><div><strong>网络诊断</strong><span>Ping / DNS / 路由</span></div></div>
+            <div class="tool-card"><div class="mini-icon">↻</div><div><strong>更新管理</strong><span>暂停、恢复与策略</span></div></div>
+            <div class="tool-card"><div class="mini-icon">◫</div><div><strong>启动项管理</strong><span>查看与禁用启动项</span></div></div>
+            <div class="tool-card"><div class="mini-icon">▦</div><div><strong>Windows 功能</strong><span>WSL / 沙箱 / Hyper-V</span></div></div>
+          </div>
+
+          <div class="section-title"><h3>最近执行</h3><span>查看全部</span></div>
+          <div class="activity">
+            <div class="activity-row"><div class="status-dot">✓</div><div><strong>关闭开始菜单推荐</strong><br><small>系统设置 · 个性化</small></div><small>今天 01:36</small><span class="pill success">执行成功</span></div>
+            <div class="activity-row"><div class="status-dot">✓</div><div><strong>清理 Windows 临时文件</strong><br><small>清理维护 · 系统缓存</small></div><small>昨天 22:15</small><span class="pill primary">释放 1.8 GB</span></div>
+            <div class="activity-row"><div class="status-dot" style="background:var(--warning-soft);color:var(--warning)">!</div><div><strong>暂停 Windows 更新</strong><br><small>系统设置 · Windows 更新</small></div><small>昨天 20:42</small><span class="pill warn">需要重启</span></div>
+          </div>
+        </div>
+
+        <div class="page" id="optimize">
+          <div class="compact-title"><div><h2>一键优化</h2><p>选择一个适合当前电脑的方案，也可以展开查看具体项目。</p></div><span class="pill primary">预设方案</span></div>
+          <article class="preset-card">
+            <div><h4>轻度优化 <span class="pill success">推荐新用户</span></h4></div>
+            <p>只调整广告、推荐内容、任务栏和常用界面设置，不禁用服务，不修改安全功能。</p>
+            <div class="preset-meta"><span>包含 8 个项目</span><span>预计 1 分钟内完成</span></div>
+            <div class="preset-actions"><button class="ghost-btn">查看详情</button><button class="secondary-btn select-plan" data-count="8">选择方案</button></div>
+          </article>
+          <article class="preset-card">
+            <div><h4>推荐优化 <span class="pill primary">适合大多数人</span></h4></div>
+            <p>包含隐私、广告、资源管理器、任务栏和部分后台功能优化。</p>
+            <div class="preset-meta"><span>包含 18 个项目</span><span>预计 2–3 分钟</span></div>
+            <div class="preset-actions"><button class="ghost-btn">查看详情</button><button class="primary-btn select-plan" data-count="18">选择方案</button></div>
+          </article>
+          <article class="preset-card">
+            <div><h4>深度优化 <span class="pill warn">谨慎使用</span></h4></div>
+            <p>包含服务、更新、电源和高级性能设置，部分功能可能影响系统行为。</p>
+            <div class="preset-meta"><span>包含 31 个项目</span><span>建议先查看详情</span></div>
+            <div class="preset-actions"><button class="ghost-btn">查看详情</button><button class="secondary-btn select-plan" data-count="31">选择方案</button></div>
+          </article>
+
+          <div class="section-title"><h3>自定义选择</h3><span>按分类进入</span></div>
+          <div class="grid-4">
+            <div class="tool-card"><div class="mini-icon">▤</div><div><strong>任务栏与开始菜单</strong><span>6 个项目</span></div></div>
+            <div class="tool-card"><div class="mini-icon">▧</div><div><strong>资源管理器</strong><span>12 个项目</span></div></div>
+            <div class="tool-card"><div class="mini-icon">◉</div><div><strong>隐私与广告</strong><span>18 个项目</span></div></div>
+            <div class="tool-card"><div class="mini-icon">↻</div><div><strong>Windows 更新</strong><span>7 个项目</span></div></div>
+          </div>
+        </div>
+
+        <div class="page" id="settings">
+          <div class="category-strip">
+            <button class="chip active">全部</button><button class="chip">资源管理器</button><button class="chip">任务栏</button><button class="chip">隐私</button><button class="chip">更新</button><button class="chip">性能</button><button class="chip">游戏</button><button class="chip">高级</button>
+          </div>
+          <h3 class="setting-group-title">资源管理器</h3>
+          <article class="setting-card"><div><h4>打开资源管理器时显示“此电脑”</h4><p>打开文件管理器后直接显示磁盘、设备和常用位置。</p><div class="meta"><span class="pill success">推荐</span></div></div><button class="switch on"></button></article>
+          <article class="setting-card"><div><h4>显示已知文件类型的扩展名</h4><p>显示 .txt、.exe、.jpg 等完整文件扩展名。</p><div class="meta"><span class="pill success">推荐</span></div></div><button class="switch on"></button></article>
+          <article class="setting-card"><div><h4>恢复 Windows 10 经典右键菜单</h4><p>取消 Windows 11 的折叠式右键菜单，操作更直接。</p><div class="meta"><span class="pill neutral">按需</span></div></div><button class="switch"></button></article>
+          <h3 class="setting-group-title">性能与服务</h3>
+          <article class="setting-card"><div><h4>禁用 SysMain 服务</h4><p>可能减少部分磁盘活动，但也可能影响应用预加载速度。</p><div class="meta"><span class="pill warn">谨慎</span><span style="font-size:11px;color:var(--muted)">适用于特殊环境</span></div></div><button class="switch"></button></article>
+          <article class="setting-card"><div><h4>关闭处理器漏洞缓解措施</h4><p>可能提升少量性能，但会降低系统安全性，不会包含在任何推荐方案中。</p><div class="meta"><span class="pill danger">高风险</span></div></div><button class="switch"></button></article>
+        </div>
+
+        <div class="page" id="apps">
+          <div class="app-toolbar">
+            <div class="tabs"><button class="tab active">预装应用</button><button class="tab">已安装软件</button><button class="tab">Windows 组件</button><button class="tab">软件安装</button></div>
+            <button class="secondary-btn">重新扫描</button>
+          </div>
+          <article class="preset-card">
+            <div><h4>删除常见预装应用</h4></div><p>Clipchamp、资讯、天气、地图、反馈中心等常见可选应用。</p><div class="preset-meta"><span>推荐方案包含 12 项</span></div><div class="preset-actions"><button class="ghost-btn">查看清单</button><button class="primary-btn select-plan" data-count="12">选择方案</button></div>
+          </article>
+          <div class="section-title"><h3>已扫描到的预装应用</h3><span>6 个示例项目</span></div>
+          <div class="app-list">
+            <div class="app-row"><div class="checkbox"></div><div class="app-icon">C</div><div><strong>Clipchamp</strong><br><span>Microsoft.Clipchamp</span></div><span>视频编辑器</span><span>213 MB</span><span class="pill success">推荐删除</span></div>
+            <div class="app-row"><div class="checkbox"></div><div class="app-icon">N</div><div><strong>Microsoft News</strong><br><span>Microsoft.BingNews</span></div><span>新闻资讯</span><span>48 MB</span><span class="pill success">推荐删除</span></div>
+            <div class="app-row"><div class="checkbox"></div><div class="app-icon">X</div><div><strong>Xbox Game Bar</strong><br><span>Microsoft.XboxGamingOverlay</span></div><span>游戏录制</span><span>172 MB</span><span class="pill neutral">按需保留</span></div>
+            <div class="app-row"><div class="checkbox"></div><div class="app-icon">P</div><div><strong>Microsoft Photos</strong><br><span>Microsoft.Windows.Photos</span></div><span>照片查看器</span><span>285 MB</span><span class="pill primary">建议保留</span></div>
+            <div class="app-row"><div class="checkbox"></div><div class="app-icon">S</div><div><strong>Microsoft Store</strong><br><span>Microsoft.WindowsStore</span></div><span>应用商店</span><span>126 MB</span><span class="pill danger">必须保留</span></div>
+          </div>
+        </div>
+
+        <div class="page" id="cleanup">
+          <div class="grid-3">
+            <article class="summary-card" style="padding:20px"><span class="pill primary">系统</span><h3 style="margin:14px 0 5px">系统临时文件</h3><p style="color:var(--muted);font-size:12.5px;line-height:1.6">清理 Temp、崩溃转储和常见缓存文件。</p><strong style="font-size:23px">1.8 GB</strong></article>
+            <article class="summary-card" style="padding:20px"><span class="pill warn">更新</span><h3 style="margin:14px 0 5px">Windows 更新缓存</h3><p style="color:var(--muted);font-size:12.5px;line-height:1.6">清理已下载但不再需要的更新文件。</p><strong style="font-size:23px">632 MB</strong></article>
+            <article class="summary-card" style="padding:20px"><span class="pill success">浏览器</span><h3 style="margin:14px 0 5px">浏览器缓存</h3><p style="color:var(--muted);font-size:12.5px;line-height:1.6">清理 Edge、Chrome 等常用浏览器缓存。</p><strong style="font-size:23px">446 MB</strong></article>
+          </div>
+          <div class="section-title"><h3>清理项目</h3><span>示例页面</span></div>
+          <article class="setting-card"><div><h4>用户临时目录</h4><p>清理当前用户 Temp 目录中的无用文件。</p></div><button class="switch on"></button></article>
+          <article class="setting-card"><div><h4>Windows 错误报告</h4><p>删除历史错误报告和部分崩溃日志。</p></div><button class="switch on"></button></article>
+          <article class="setting-card"><div><h4>缩略图缓存</h4><p>删除后系统会在需要时重新生成缩略图。</p></div><button class="switch"></button></article>
+        </div>
+
+        <div class="page" id="repair">
+          <div class="compact-title"><div><h2>系统修复</h2><p>集中运行 Windows 自带工具，处理常见系统和网络问题。</p></div><span class="pill success">系统原生工具</span></div>
+          <div class="grid-2">
+            <article class="repair-card"><div class="card-icon">D</div><h4>系统映像修复</h4><p>使用 DISM 检查并修复 Windows 系统映像。</p><button class="secondary-btn open-modal">开始修复</button></article>
+            <article class="repair-card"><div class="card-icon">S</div><h4>系统文件检查</h4><p>使用 SFC 扫描并恢复受损的系统文件。</p><button class="secondary-btn open-modal">开始扫描</button></article>
+            <article class="repair-card"><div class="card-icon">U</div><h4>Windows 更新修复</h4><p>重置更新服务、缓存和相关系统组件。</p><button class="secondary-btn open-modal">开始修复</button></article>
+            <article class="repair-card"><div class="card-icon">M</div><h4>Microsoft Store 修复</h4><p>重置商店缓存并重新注册相关组件。</p><button class="secondary-btn open-modal">开始修复</button></article>
+          </div>
+          <div class="section-title"><h3>网络修复</h3><span>执行前会展示影响说明</span></div>
+          <div class="network-panel">
+            <div class="network-action"><strong>清理 DNS 缓存</strong><button class="open-modal">执行</button></div>
+            <div class="network-action"><strong>重置 Winsock</strong><button class="open-modal">执行</button></div>
+            <div class="network-action"><strong>重置 TCP/IP</strong><button class="open-modal">执行</button></div>
+            <div class="network-action"><strong>重新获取 IP</strong><button class="open-modal">执行</button></div>
+          </div>
+        </div>
+
+        <div class="page" id="tools">
+          <div class="grid-3">
+            <div class="feature-card"><div class="card-icon">⌁</div><h4>网络诊断中心</h4><p>Ping、Tracert、DNS 查询、端口占用和路由表查看。</p><span class="card-link">打开工具 →</span></div>
+            <div class="feature-card"><div class="card-icon">◫</div><h4>启动项管理</h4><p>统一查看登录启动项、注册表启动项和计划任务。</p><span class="card-link">打开工具 →</span></div>
+            <div class="feature-card"><div class="card-icon">▦</div><h4>Windows 功能</h4><p>管理 WSL、Hyper-V、Sandbox 和其他可选功能。</p><span class="card-link">打开工具 →</span></div>
+            <div class="feature-card"><div class="card-icon">⚙</div><h4>服务管理</h4><p>查看系统服务状态，按场景启用或禁用。</p><span class="card-link">打开工具 →</span></div>
+            <div class="feature-card"><div class="card-icon">↻</div><h4>更新管理</h4><p>暂停更新、恢复更新和查看当前更新策略。</p><span class="card-link">打开工具 →</span></div>
+            <div class="feature-card"><div class="card-icon">≋</div><h4>环境变量</h4><p>查看和编辑用户级、系统级环境变量。</p><span class="card-link">打开工具 →</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="bottom-bar" id="bottomBar">
+      <div><strong id="selectedLabel">已选择 18 项</strong><span>将在执行前显示确认清单</span></div>
+      <div class="bottom-actions"><button class="secondary-btn" id="clearSelection">清空选择</button><button class="primary-btn open-modal">开始执行 →</button></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-head"><h3>正在执行推荐优化</h3><button class="modal-close" id="modalClose">×</button></div>
+      <div class="modal-body">
+        <div class="progress-track"><div class="progress-bar"></div></div>
+        <div class="progress-meta"><span>当前进度 3 / 12</span><strong>68%</strong></div>
+        <div class="task-list">
+          <div class="task done"><div class="task-state">✓</div><div>关闭开始菜单推荐</div></div>
+          <div class="task done"><div class="task-state">✓</div><div>关闭锁屏广告</div></div>
+          <div class="task done"><div class="task-state">✓</div><div>显示文件扩展名</div></div>
+          <div class="task current"><div class="task-state">●</div><div>正在调整资源管理器设置</div></div>
+          <div class="task"><div class="task-state">○</div><div>关闭应用启动跟踪</div></div>
+          <div class="task"><div class="task-state">○</div><div>清理常见预装应用</div></div>
+        </div>
+        <div class="log-box">01:42:16  已应用：显示文件扩展名<br>01:42:17  已应用：打开资源管理器时显示此电脑<br>01:42:18  正在重启 Windows 资源管理器</div>
+      </div>
+      <div class="modal-foot"><button class="secondary-btn">后台运行</button><button class="primary-btn">停止后续任务</button></div>
+    </div>
+  </div>
+
+  <script>
+    const meta = {
+      home: ["首页", "集中管理 Windows 的优化、精简、修复与常用工具"],
+      optimize: ["一键优化", "选择预设方案或自定义优化项目"],
+      settings: ["系统设置", "统一管理资源管理器、任务栏、隐私、更新与性能设置"],
+      apps: ["应用管理", "管理预装应用、Windows 组件和常用软件"],
+      cleanup: ["清理维护", "清理缓存、临时文件和常见系统垃圾"],
+      repair: ["系统修复", "运行 Windows 自带修复工具解决常见问题"],
+      tools: ["实用工具", "面向日常运维的 Windows 工具集合"]
+    };
+
+    const app = document.getElementById('app');
+    const bottomBar = document.getElementById('bottomBar');
+    const pageTitle = document.getElementById('pageTitle');
+    const pageDesc = document.getElementById('pageDesc');
+
+    function showPage(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
+      document.querySelectorAll('.nav-button[data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === id));
+      pageTitle.textContent = meta[id][0];
+      pageDesc.textContent = meta[id][1];
+      const shouldShowBottom = ['optimize','settings','apps','cleanup'].includes(id) && bottomBar.dataset.selected === 'true';
+      bottomBar.classList.toggle('show', shouldShowBottom);
+      app.classList.toggle('has-bottom', shouldShowBottom);
+    }
+
+    document.querySelectorAll('.nav-button[data-page]').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
+    document.querySelectorAll('[data-jump]').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.jump)));
+
+    document.querySelectorAll('.switch').forEach(sw => sw.addEventListener('click', () => {
+      sw.classList.toggle('on');
+      bottomBar.dataset.selected = 'true';
+      bottomBar.classList.add('show');
+      app.classList.add('has-bottom');
+      document.getElementById('selectedLabel').textContent = '已修改 3 项';
+    }));
+
+    document.querySelectorAll('.select-plan').forEach(btn => btn.addEventListener('click', () => {
+      bottomBar.dataset.selected = 'true';
+      bottomBar.classList.add('show');
+      app.classList.add('has-bottom');
+      document.getElementById('selectedLabel').textContent = `已选择 ${btn.dataset.count} 项`;
+    }));
+
+    document.querySelectorAll('.checkbox').forEach(box => box.addEventListener('click', () => {
+      box.style.background = box.style.background ? '' : 'var(--primary)';
+      box.style.borderColor = box.style.background ? 'var(--primary)' : '#c9d0db';
+      box.innerHTML = box.style.background ? '<span style="color:white;font-size:12px;display:grid;place-items:center;height:100%">✓</span>' : '';
+      bottomBar.dataset.selected = 'true';
+      bottomBar.classList.add('show');
+      app.classList.add('has-bottom');
+      document.getElementById('selectedLabel').textContent = '已选择 3 个应用';
+    }));
+
+    document.getElementById('clearSelection').addEventListener('click', () => {
+      bottomBar.dataset.selected = 'false';
+      bottomBar.classList.remove('show');
+      app.classList.remove('has-bottom');
+    });
+
+    const modal = document.getElementById('modalBackdrop');
+    document.querySelectorAll('.open-modal').forEach(btn => btn.addEventListener('click', () => modal.classList.add('show')));
+    document.getElementById('modalClose').addEventListener('click', () => modal.classList.remove('show'));
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
+
+    document.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    }));
+
+    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    }));
+  </script>
+</body>
+</html>

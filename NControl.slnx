@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NControl.App/NControl.App.csproj" />
+    <Project Path="src/NControl.Core/NControl.Core.csproj" />
+    <Project Path="src/NControl.Infrastructure/NControl.Infrastructure.csproj" />
+    <Project Path="src/NControl.Modules.Applications/NControl.Modules.Applications.csproj" />
+    <Project Path="src/NControl.Modules.Cleanup/NControl.Modules.Cleanup.csproj" />
+    <Project Path="src/NControl.Modules.Optimization/NControl.Modules.Optimization.csproj" />
+    <Project Path="src/NControl.Modules.Repair/NControl.Modules.Repair.csproj" />
+    <Project Path="src/NControl.Modules.Tools/NControl.Modules.Tools.csproj" />
+    <Project Path="src/NControl.Presentation/NControl.Presentation.csproj" />
+  </Folder>
+</Solution>

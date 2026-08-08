@@ -11,12 +11,12 @@ namespace NControl.Presentation.ViewModels;
 /// </summary>
 public partial class CleanupViewModel : ObservableObject
 {
-    public CleanupViewModel(IFunctionCatalog catalog, SelectionService selection)
+    public CleanupViewModel(IFunctionCatalog catalog, SelectionService selection, NavigationService nav)
     {
         foreach (var group in catalog.ByModule(ModuleKind.Cleanup).GroupBy(f => f.Category))
             Groups.Add(new SettingGroupViewModel(
                 group.Key,
-                group.Select(f => new SettingRowViewModel(f, selection))));
+                group.Select(f => new SettingRowViewModel(f, selection, nav))));
     }
 
     public ObservableCollection<SettingGroupViewModel> Groups { get; } = new();

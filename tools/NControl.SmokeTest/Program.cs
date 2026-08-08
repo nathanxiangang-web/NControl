@@ -157,6 +157,43 @@ var advancedNonHighRisk = catalog.ByModule(ModuleKind.Optimization)
     .ToArray();
 Check(advancedNonHighRisk.Length == 0, "高级分类不含安全/推荐级功能", string.Join(",", advancedNonHighRisk));
 
+// ---------- 4. 恢复命令生成器 ----------
+static FunctionItem RestoreProbe(string id, string command) => new()
+{
+    Id = id,
+    Name = "恢复探针",
+    Category = "测试",
+    Module = ModuleKind.Tools,
+    Description = "",
+    Risk = RiskLevel.Safe,
+    RequiresAdmin = false,
+    Restart = RestartRequirement.None,
+    Source = "测试",
+    Kind = ExecutionKind.PowerShell,
+    Command = command
+};
+
+var restoreReg = RestoreCommandBuilder.Build(RestoreProbe("t.restore", "Set-ItemProperty -Path 'HKCU:\\Software\\Test' -Name 'Foo' -Value 1 -Type DWord -Force"));
+Check(restoreReg?.Contains("Remove-ItemProperty -Path 'HKCU:\\Software\\Test' -Name 'Foo'") == true,
+    "恢复生成器:注册表写入 -> 反向删除", restoreReg);
+
+var restoreSvc = RestoreCommandBuilder.Build(RestoreProbe("t.restore-svc", "Stop-Service SysMain -Force -ErrorAction SilentlyContinue; Set-Service SysMain -StartupType Disabled"));
+Check(restoreSvc?.Contains("Set-Service SysMain -StartupType Manual") == true,
+    "恢复生成器:服务禁用 -> 恢复手动启动", restoreSvc);
+
+var restoreHpet = RestoreCommandBuilder.Build(RestoreProbe("t.restore-hpet", "bcdedit /set useplatformclock false"));
+Check(restoreHpet?.Contains("bcdedit /deletevalue useplatformclock") == true,
+    "恢复生成器:bcdedit 特例", restoreHpet);
+
+var restorePower = RestoreCommandBuilder.Build(RestoreProbe("t.restore-power", "powercfg /h off; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power' -Name 'HibernateEnabled' -Value 0 -Type DWord -Force"));
+Check(restorePower?.Contains("powercfg /h on") == true && restorePower?.Contains("Remove-ItemProperty") == true,
+    "恢复生成器:电源特例 + 注册表删除混合", restorePower);
+
+// 目录中可恢复功能占比(注册表/服务类应绝大多数可推导)
+var restorable = catalog.All.Count(f => RestoreCommandBuilder.Build(f) is not null);
+Console.WriteLine($"可恢复功能: {restorable} / {catalog.All.Count}");
+Check(restorable >= catalog.All.Count * 0.6, "目录中可恢复功能占比不低于 60%", $"{restorable}/{catalog.All.Count}");
+
 // 搜索
 Check(catalog.Search("SysMain").Any(f => f.Id == "advanced.disable-sysmain"), "搜索可命中功能");
 Check(catalog.Search("不存在的关键词xyz").Count == 0, "搜索无结果时返回空");

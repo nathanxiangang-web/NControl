@@ -173,21 +173,25 @@ public partial class PresetCardViewModel : ObservableObject
     }
 }
 
-/// <summary>设置/清理页行(开关 = “选择应用”,非真实状态)。</summary>
+/// <summary>设置/清理页行(开关 = “选择应用”,非真实状态;支持单项恢复)。</summary>
 public partial class SettingRowViewModel : ObservableObject
 {
     private readonly SelectionService _selection;
+    private readonly NavigationService _nav;
 
-    public SettingRowViewModel(FunctionItem item, SelectionService selection)
+    public SettingRowViewModel(FunctionItem item, SelectionService selection, NavigationService nav)
     {
         Item = item;
         _selection = selection;
+        _nav = nav;
         var hints = new List<string>();
         if (item.RequiresAdmin) hints.Add("需要管理员权限");
         if (item.Restart == RestartRequirement.ExplorerRestart) hints.Add("需重启资源管理器");
         if (item.Restart == RestartRequirement.Reboot) hints.Add("需重启系统");
         HintText = hints.Count > 0 ? string.Join(" · ", hints) : "普通权限";
         IsHighRisk = item.Risk == RiskLevel.HighRisk;
+        RestoreCommandText = RestoreCommandBuilder.Build(item);
+        CanRestore = !string.IsNullOrWhiteSpace(RestoreCommandText);
     }
 
     public FunctionItem Item { get; }
@@ -196,6 +200,8 @@ public partial class SettingRowViewModel : ObservableObject
     public RiskLevel Risk => Item.Risk;
     public string HintText { get; }
     public bool IsHighRisk { get; }
+    public string? RestoreCommandText { get; }
+    public bool CanRestore { get; }
 
     public bool IsSelected
     {
@@ -206,6 +212,29 @@ public partial class SettingRowViewModel : ObservableObject
             else _selection.Remove(Item);
             OnPropertyChanged();
         }
+    }
+
+    /// <summary>撤销该项优化,恢复系统默认值;恢复操作同样写入任务记录。</summary>
+    [RelayCommand]
+    private async Task RestoreAsync()
+    {
+        if (string.IsNullOrWhiteSpace(RestoreCommandText)) return;
+        var restoreItem = new FunctionItem
+        {
+            Id = Item.Id + ".restore",
+            Name = "恢复:" + Item.Name,
+            Category = Item.Category,
+            Module = Item.Module,
+            Description = "撤销该项优化,删除优化写入的配置并恢复系统默认值。",
+            Risk = RiskLevel.Safe,
+            RequiresAdmin = Item.RequiresAdmin,
+            Restart = Item.Restart,
+            Source = "自研 · 恢复命令",
+            Kind = ExecutionKind.PowerShell,
+            Command = RestoreCommandText,
+            TimeoutSeconds = Item.TimeoutSeconds
+        };
+        await _nav.RunSingleAsync(restoreItem);
     }
 }
 

@@ -39,6 +39,12 @@ public sealed class FunctionItem
     /// <summary>PowerShell 脚本或系统命令。</summary>
     public string? Command { get; init; }
 
+    /// <summary>
+    /// 恢复命令(可选)。为空时由 <see cref="RestoreCommandBuilder"/> 从 Command 自动推导。
+    /// 对应产品文档 §4.1“恢复方式”预留字段的第一代实现。
+    /// </summary>
+    public string? RestoreCommand { get; init; }
+
     /// <summary>超时秒数。</summary>
     public int TimeoutSeconds { get; init; } = 180;
 

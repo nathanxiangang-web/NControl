@@ -1,6 +1,7 @@
 <UserControl x:Class="NControl.Presentation.Views.CleanupView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:NControl.Presentation"
              xmlns:ctrl="clr-namespace:NControl.Presentation.Controls">
     <StackPanel>
         <TextBlock FontSize="20" FontWeight="SemiBold" Text="清理维护" />
@@ -48,8 +49,15 @@
                                                 <TextBlock Text="{Binding Description}" Style="{StaticResource MutedText}" Margin="0,6,0,0" />
                                                 <TextBlock Text="{Binding HintText}" Style="{StaticResource SubtleText}" Margin="0,6,0,0" />
                                             </StackPanel>
-                                            <CheckBox Grid.Column="1" Style="{StaticResource Switch}"
-                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <CheckBox Style="{StaticResource Switch}"
+                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}" HorizontalAlignment="Right" />
+                                                <Button Content="恢复" Style="{StaticResource GhostButton}" Height="28" Padding="10,0"
+                                                        Margin="0,8,0,0" HorizontalAlignment="Right"
+                                                        Visibility="{Binding CanRestore, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"
+                                                        Command="{Binding RestoreCommand}"
+                                                        ToolTip="撤销该项优化,删除优化写入的配置并恢复系统默认值" />
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

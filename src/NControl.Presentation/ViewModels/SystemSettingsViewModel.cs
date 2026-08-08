@@ -15,8 +15,9 @@ public partial class SystemSettingsViewModel : ObservableObject
 {
     private readonly IFunctionCatalog _catalog;
     private readonly SelectionService _selection;
+    private readonly NavigationService _nav;
 
-    public SystemSettingsViewModel(IFunctionCatalog catalog, SelectionService selection)
+    public SystemSettingsViewModel(IFunctionCatalog catalog, SelectionService selection, NavigationService nav)
     {
         _catalog = catalog;
         _selection = selection;
@@ -25,6 +26,7 @@ public partial class SystemSettingsViewModel : ObservableObject
         foreach (var category in catalog.ByModule(ModuleKind.Optimization).Select(f => f.Category).Distinct())
             Chips.Add(new ChipItem(category, false));
 
+        _nav = nav;
         Rebuild();
     }
 
@@ -64,6 +66,6 @@ public partial class SystemSettingsViewModel : ObservableObject
         foreach (var group in items.GroupBy(f => f.Category))
             Groups.Add(new SettingGroupViewModel(
                 group.Key,
-                group.Select(f => new SettingRowViewModel(f, _selection))));
+                group.Select(f => new SettingRowViewModel(f, _selection, _nav))));
     }
 }

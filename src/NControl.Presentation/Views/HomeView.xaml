@@ -31,7 +31,7 @@
 
         <!-- 快速开始 -->
         <TextBlock Text="快速开始" Style="{StaticResource SectionTitle}" />
-        <TextBlock Text="第一代以功能入口为主,不展示虚假健康评分" Foreground="{StaticResource MutedBrush}"
+        <TextBlock Text="第二代强调真实状态、兼容性与可回滚,不展示虚假健康评分" Foreground="{StaticResource MutedBrush}"
                    FontSize="12" Margin="0,-40,0,12" HorizontalAlignment="Right" />
         <ItemsControl ItemsSource="{Binding QuickCards}">
             <ItemsControl.ItemsPanel>

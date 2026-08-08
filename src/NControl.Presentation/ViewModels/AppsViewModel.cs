@@ -52,10 +52,10 @@ public partial class AppsViewModel : ObservableObject
         new SoftwareEntry("PowerToys", "微软系统工具集,官方下载页", "https://learn.microsoft.com/windows/powertoys/", InstallKind.OpenUrl),
         new SoftwareEntry("PotPlayer", "多媒体播放器,官方下载页", "https://potplayer.daum.net/", InstallKind.OpenUrl),
 
-        // 本地安装:StartAllBack(安装包放 %LocalAppData%\NControl\installers\,点击弹出官方向导手动安装)
+        // 本地安装:优先使用 %LocalAppData%\NControl\installers\ 中的覆盖文件,否则使用发布包内置载荷。
         new SoftwareEntry("StartAllBack", "Win11 开始菜单/任务栏增强,本地安装包(点击后手动完成安装)", "startallback.com", InstallKind.LaunchInstaller,
             InstallerFile: "StartAllBack_setup.exe"),
-        // 本地安装:GeekUninstaller(便携免安装单 exe,优先 D 盘,不可写自动回退 C 盘 + 桌面快捷方式)
+        // GeekUninstaller:便携免安装单 exe,优先 D 盘,不可写自动回退 C 盘 + 桌面快捷方式。
         new SoftwareEntry("GeekUninstaller", "轻量卸载工具,便携免安装,优先安装到 D 盘(不可写自动回退 C 盘)并创建桌面快捷方式", "geekuninstaller.com", InstallKind.PortableExtract,
             InstallerFile: "geek.exe", TargetDir: @"D:\Program Files\GeekUninstaller", FallbackDir: @"C:\Program Files\GeekUninstaller", ExeName: "geek.exe")
     };
@@ -108,13 +108,10 @@ public partial class AppsViewModel : ObservableObject
     /// <summary>启动本地安装包,弹出官方安装向导由用户手动完成(不静默,避免破解注入风险)。</summary>
     private void LaunchInstaller(SoftwareEntry entry)
     {
-        var installDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NControl", "installers");
-        var installerPath = Path.Combine(installDir, entry.InstallerFile ?? "");
-        if (!File.Exists(installerPath))
+        var installerPath = ResolveInstallerPath(entry.InstallerFile, out var searchHint);
+        if (installerPath is null)
         {
-            InstallStatusText = $"未找到安装包 {entry.InstallerFile},请先将其放入 {installDir}";
+            InstallStatusText = $"未找到安装包 {entry.InstallerFile},已检查 {searchHint}";
             return;
         }
         try
@@ -135,13 +132,10 @@ public partial class AppsViewModel : ObservableObject
     /// <summary>静默安装:在后台运行安装器(安装包位于 %LocalAppData%\NControl\installers\)。</summary>
     private async Task SilentInstallAsync(SoftwareEntry entry)
     {
-        var installDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NControl", "installers");
-        var installerPath = Path.Combine(installDir, entry.InstallerFile ?? "");
-        if (!File.Exists(installerPath))
+        var installerPath = ResolveInstallerPath(entry.InstallerFile, out var searchHint);
+        if (installerPath is null)
         {
-            InstallStatusText = $"未找到安装包 {entry.InstallerFile},请先将其放入 {installDir}";
+            InstallStatusText = $"未找到安装包 {entry.InstallerFile},已检查 {searchHint}";
             return;
         }
 
@@ -154,10 +148,10 @@ public partial class AppsViewModel : ObservableObject
             if (entry.ExtractFirst)
             {
                 // 7z SFX 安装包:先解压,再运行内部 exe(Repack 版 SFX 外壳不响应静默参数)
-                var sevenZip = Path.Combine(installDir, "7zr.exe");
-                if (!File.Exists(sevenZip))
+                var sevenZip = ResolveInstallerPath("7zr.exe", out var sevenZipSearchHint);
+                if (sevenZip is null)
                 {
-                    InstallStatusText = $"缺少解压工具 7zr.exe,请放入 {installDir}";
+                    InstallStatusText = $"缺少解压工具 7zr.exe,已检查 {sevenZipSearchHint}";
                     return;
                 }
                 tempDir = Path.Combine(Path.GetTempPath(), "nctl_install_" + Guid.NewGuid().ToString("N"));
@@ -237,13 +231,10 @@ public partial class AppsViewModel : ObservableObject
     /// <summary>便携安装:解压 zip 到目标目录 + 创建桌面快捷方式。</summary>
     private async Task PortableInstallAsync(SoftwareEntry entry)
     {
-        var installDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NControl", "installers");
-        var zipPath = Path.Combine(installDir, entry.InstallerFile ?? "");
-        if (!File.Exists(zipPath))
+        var zipPath = ResolveInstallerPath(entry.InstallerFile, out var searchHint);
+        if (zipPath is null)
         {
-            InstallStatusText = $"未找到安装包 {entry.InstallerFile},请先将其放入 {installDir}";
+            InstallStatusText = $"未找到安装包 {entry.InstallerFile},已检查 {searchHint}";
             return;
         }
 
@@ -292,6 +283,29 @@ public partial class AppsViewModel : ObservableObject
         {
             IsInstalling = false;
         }
+    }
+
+    /// <summary>
+    /// 解析本地安装载荷。用户目录中的同名文件优先,便于无需重新发布即可更新安装包;
+    /// 找不到时回退到 NControl.exe 同级的 Installers 目录。
+    /// </summary>
+    private static string? ResolveInstallerPath(string? installerFile, out string searchHint)
+    {
+        var userInstallDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "NControl", "installers");
+        var bundledInstallDir = Path.Combine(AppContext.BaseDirectory, "Installers");
+        searchHint = $"{userInstallDir} 和 {bundledInstallDir}";
+
+        if (string.IsNullOrWhiteSpace(installerFile))
+            return null;
+
+        var userPath = Path.Combine(userInstallDir, installerFile);
+        if (File.Exists(userPath))
+            return userPath;
+
+        var bundledPath = Path.Combine(bundledInstallDir, installerFile);
+        return File.Exists(bundledPath) ? bundledPath : null;
     }
 
     /// <summary>

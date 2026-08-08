@@ -162,6 +162,7 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8
         };
+        ApplyNControlEnvironment(psi);
         psi.ArgumentList.Add("-NoProfile");
         psi.ArgumentList.Add("-NonInteractive");
         psi.ArgumentList.Add("-ExecutionPolicy");
@@ -235,6 +236,7 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            ApplyNControlEnvironment(psi);
             psi.ArgumentList.Add("-NoProfile");
             psi.ArgumentList.Add("-NonInteractive");
             psi.ArgumentList.Add("-Command");
@@ -275,6 +277,10 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
             TryDelete(outFile);
         }
     }
+
+    // 子 PowerShell 中的 AppContext 指向 powershell.exe，显式传递 NControl 的真实程序目录。
+    private static void ApplyNControlEnvironment(ProcessStartInfo psi) =>
+        psi.Environment["NCONTROL_APP_BASE"] = AppContext.BaseDirectory;
 
     private static string EscapeSingle(string s) => s.Replace("'", "''");
     private static string Short(string s) => s.Length <= 80 ? s : s[..80] + "…";

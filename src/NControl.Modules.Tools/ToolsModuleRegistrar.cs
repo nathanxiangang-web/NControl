@@ -4,7 +4,7 @@ namespace NControl.Modules.Tools;
 
 /// <summary>
 /// 工具模块:查看、诊断或操作日常 Windows 管理对象(产品文档 §3.3)。
-/// 查看类工具与修改类工具在视觉和确认方式上区分;第一代以查看/诊断类即时工具为主。
+/// 查看类工具与修改类工具在视觉和确认方式上区分;即时工具以查看/诊断类为主。
 /// </summary>
 public sealed class ToolsModuleRegistrar : IModuleRegistrar
 {

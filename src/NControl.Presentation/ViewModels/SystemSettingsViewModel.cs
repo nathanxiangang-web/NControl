@@ -9,7 +9,7 @@ namespace NControl.Presentation.ViewModels;
 /// <summary>
 /// 系统设置页:分类标签 + 分组设置(产品文档 §6.3)。
 /// 分类与《ZyperWin++ 当前功能统计表》对齐(7 个分类)。
-/// 第一代状态未知,用“选择应用”表达,不假装显示真实开关状态。
+/// 状态未知时用“选择应用”表达,不假装显示真实开关状态。
 /// 高风险项目仅在其所属分类中显示,不混入“全部”视图,也不进任何预设。
 /// </summary>
 public partial class SystemSettingsViewModel : ObservableObject

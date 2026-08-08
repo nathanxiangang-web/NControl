@@ -8,7 +8,7 @@ namespace NControl.Presentation.ViewModels;
 
 /// <summary>
 /// 清理维护页:按来源分组 + 扫描统计(第二代 §9)。
-/// 第一代不显示虚构的空间数字;第二代提供真实扫描(文件数/大小/分类汇总)。
+/// 只展示真实扫描得到的文件数、大小与分类汇总,不显示虚构空间数字。
 /// </summary>
 public partial class CleanupViewModel : ObservableObject
 {

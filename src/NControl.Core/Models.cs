@@ -41,7 +41,7 @@ public sealed class FunctionItem
 
     /// <summary>
     /// 恢复命令(可选)。为空时由 <see cref="RestoreCommandBuilder"/> 从 Command 自动推导。
-    /// 对应产品文档 §4.1“恢复方式”预留字段的第一代实现。
+    /// 对应产品文档“恢复方式”的统一模型字段。
     /// </summary>
     public string? RestoreCommand { get; init; }
 
@@ -60,10 +60,10 @@ public sealed class FunctionItem
     /// <summary>附加信息(如 Appx 包名)。</summary>
     public string? Extra { get; init; }
 
-    /// <summary>预留:第一代后补的状态检测。</summary>
+    /// <summary>状态检测入口。</summary>
     public bool Detectable { get; init; }
 
-    /// <summary>预留:第一代后补的恢复/回滚。</summary>
+    /// <summary>恢复/回滚入口。</summary>
     public bool Recoverable { get; init; }
 }
 

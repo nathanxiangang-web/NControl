@@ -29,9 +29,9 @@
             </ItemsControl>
         </Border>
 
-        <TextBlock Text="第一代范围" Style="{StaticResource SectionTitle}" />
+        <TextBlock Text="第二代能力与边界" Style="{StaticResource SectionTitle}" />
         <Border Style="{StaticResource Card}" Padding="18,14">
-            <ItemsControl ItemsSource="{Binding Gen1Scope}">
+            <ItemsControl ItemsSource="{Binding ProductScope}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding}" Style="{StaticResource MutedText}" Margin="0,3" />

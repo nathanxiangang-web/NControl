@@ -17,7 +17,7 @@ public partial class AppSettingsViewModel : ObservableObject
 
     public string DataFolder { get; }
     public string DatabasePath { get; }
-    public string Version => typeof(AppSettingsViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+    public string Version => typeof(AppSettingsViewModel).Assembly.GetName().Version?.ToString(3) ?? "2.0.0";
 
     [RelayCommand]
     private void OpenDataFolder()

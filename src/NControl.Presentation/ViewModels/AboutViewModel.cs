@@ -13,8 +13,8 @@ public partial class AboutViewModel : ObservableObject
             Sources.Add(new SourceRowViewModel(record));
     }
 
-    public string Version => typeof(AboutViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
-    public string ProductLine => "NControl · Windows 控制中心(第一代功能型测试版本)";
+    public string Version => typeof(AboutViewModel).Assembly.GetName().Version?.ToString(3) ?? "2.0.0";
+    public string ProductLine => "NControl · Windows 控制中心(第二代正式版)";
 
     public IReadOnlyList<string> Baseline { get; } = new[]
     {
@@ -26,11 +26,11 @@ public partial class AboutViewModel : ObservableObject
         "产品结构:Core → Modules → Execution/Infrastructure → Integrations"
     };
 
-    public IReadOnlyList<string> Gen1Scope { get; } = new[]
+    public IReadOnlyList<string> ProductScope { get; } = new[]
     {
-        "第一代为功能型测试版本,不宣称覆盖所有电脑或保证性能提升。",
+        "第二代提供兼容性判断、配置复用、批次回滚、清理扫描与高风险操作治理。",
         "不展示虚构健康评分与性能百分比。",
-        "高风险功能不进任何推荐方案;来源与许可证台账完整。"
+        "高风险功能不进任何推荐方案;不可恢复操作单独确认并明确标识。"
     };
 
     public ObservableCollection<SourceRowViewModel> Sources { get; } = new();

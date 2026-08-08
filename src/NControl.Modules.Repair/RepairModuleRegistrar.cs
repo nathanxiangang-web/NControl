@@ -55,7 +55,7 @@ public sealed class RepairModuleRegistrar : IModuleRegistrar
 
     public void RegisterPresets(IFunctionCatalog catalog)
     {
-        // 修复模块第一代以单项/多步任务执行,不提供批量预设。
+        // 修复模块以单项/多步任务执行,不提供批量预设。
     }
 
     private static FunctionItem F(

@@ -1,6 +1,6 @@
 namespace NControl.Core;
 
-/// <summary>任务记录存储(第一代使用 SQLite,优先用于任务记录、历史和后续扩展)。</summary>
+/// <summary>任务记录存储(SQLite,用于任务历史、结果明细与批次回滚分析)。</summary>
 public interface ITaskRecordStore
 {
     Task SaveAsync(TaskRecord record);

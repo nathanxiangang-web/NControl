@@ -5,7 +5,7 @@ namespace NControl.Core;
 
 /// <summary>
 /// 状态检测器:从功能项命令解析出检测规则,判断系统当前是否已处于优化后状态。
-/// 对应产品文档 §4.1 预留的“状态检测”字段(第一代后补实现)。
+/// NControl 第二代状态检测实现。
 /// 返回 null 表示无法检测(命令格式复杂或非注册表/服务类)。
 /// 注:注册表读取使用 64 位视图,与 App 执行(64 位进程)一致。
 /// </summary>
@@ -37,6 +37,11 @@ public static class StateDetector
     {
         var cmd = item?.Command;
         if (string.IsNullOrWhiteSpace(cmd)) return null;
+
+        // 安全中心/Defender 使用外部 TrustedInstaller 控制脚本,无法由通用命令正则推导。
+        // 以现有核心服务的 Start=4 作为持久禁用状态。
+        if (item!.Id.Equals("advanced.disable-security-center", StringComparison.OrdinalIgnoreCase))
+            return CheckSecurityCenterDisabled();
 
         var results = new List<bool?>();
 
@@ -74,7 +79,8 @@ public static class StateDetector
             var (hive, subKey) = SplitPath(psPath);
             if (hive is null) return null;
             using var key = OpenHive(hive.Value).OpenSubKey(subKey, writable: false);
-            if (key is null) return null;
+            // 目标键尚未创建时,等价于优化值不存在,应显示“未优化”而非“状态未知”。
+            if (key is null) return false;
             var actual = key.GetValue(name);
             if (actual is null) return false;
 
@@ -137,6 +143,30 @@ public static class StateDetector
             if (key is null) return null;
             var h = key.GetValue("HibernateEnabled");
             return h is null || Convert.ToInt32(h) == 0;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool? CheckSecurityCenterDisabled()
+    {
+        try
+        {
+            var found = false;
+            foreach (var serviceName in new[] { "WinDefend", "wscsvc", "WdNisSvc", "SecurityHealthService" })
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(
+                    $@"SYSTEM\CurrentControlSet\Services\{serviceName}", writable: false);
+                if (key is null) continue;
+                found = true;
+                var start = key.GetValue("Start");
+                if (start is null || Convert.ToInt32(start) != 4)
+                    return false;
+            }
+
+            return found ? true : null;
         }
         catch
         {

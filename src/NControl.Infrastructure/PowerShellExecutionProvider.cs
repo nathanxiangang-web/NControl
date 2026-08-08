@@ -24,6 +24,9 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
         if (string.IsNullOrWhiteSpace(script))
             return new ExecutionResult(false, -1, null, "功能项没有配置 PowerShell 脚本");
 
+        // 中文系统下 powershell.exe 重定向输出默认 GBK(代码页 936);强制 UTF-8,避免中文乱码
+        script = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; " + script;
+
         var needAdmin = item.RequiresAdmin && !ElevationHelper.IsElevated();
 
         if (needAdmin)
@@ -107,7 +110,8 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
 
         try
         {
-            await File.WriteAllTextAsync(ps1, script, Encoding.UTF8, ct);
+            // UTF-8 BOM 写入:PowerShell 5.1 对无 BOM 文件按 ANSI 解码,中文脚本会乱码
+            await File.WriteAllTextAsync(ps1, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), ct);
 
             // 提权进程:输出重定向到文件,父进程等待并读取;退出码经 Start-Process -PassThru 获取
             var wrapper = $"& {{ & '{ps1}' *> '{outFile}'; exit $LASTEXITCODE }}";

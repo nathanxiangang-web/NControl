@@ -129,24 +129,39 @@ var probeCmd = new FunctionItem
     Command = "echo cmd-ok"
 };
 
+var probeCn = new FunctionItem
+{
+    Id = "smoke.probe-cn",
+    Name = "冒烟探针(中文输出)",
+    Category = "测试",
+    Module = ModuleKind.Tools,
+    Description = "验证 PowerShell 中文输出编码。",
+    Risk = RiskLevel.Safe,
+    RequiresAdmin = false,
+    Restart = RestartRequirement.None,
+    Source = "测试",
+    Kind = ExecutionKind.PowerShell,
+    Command = "Write-Output '中文测试:你好世界'; exit 0"
+};
 var record = await center.ExecuteAsync(
-    new ExecutionRequest("冒烟测试任务", new[] { probeOk, probeFail, probeCmd }),
+    new ExecutionRequest("冒烟测试任务", new[] { probeOk, probeFail, probeCmd, probeCn }),
     progress,
     CancellationToken.None);
 
 Console.WriteLine($"任务结果: {record.Result} (成功 {record.SuccessCount} / 失败 {record.FailedCount} / 取消 {record.CancelledCount})");
-Check(record.SuccessCount == 2 && record.FailedCount == 1, "执行结果:2 成功 + 1 失败");
+Check(record.SuccessCount == 3 && record.FailedCount == 1, "执行结果:3 成功 + 1 失败");
 Check(record.Result == "部分失败", "任务汇总为“部分失败”");
 Check(record.Items[0].Output?.Contains("smoke-ok") == true, "成功项输出包含 smoke-ok", record.Items[0].Output);
 Check(record.Items[1].Status == "失败" && !string.IsNullOrWhiteSpace(record.Items[1].Error), "失败项记录了错误信息", record.Items[1].Error);
 Check(record.Items[2].Output?.Contains("cmd-ok") == true, "命令执行项输出包含 cmd-ok", record.Items[2].Output);
+Check(record.Items[3].Output?.Contains("中文测试:你好世界") == true, "PowerShell 中文输出无乱码(GBK->UTF8 修复)", record.Items[3].Output);
 Check(progressEvents.Count >= 3, "进度事件不少于 3 条", $"实际 {progressEvents.Count}");
 Check(record.Id > 0, "任务记录已写入 SQLite 并获得 Id", $"Id={record.Id}");
 
 // ---------- 3. 记录持久化 ----------
 var recent = await store.GetRecentAsync(5);
 Check(recent.Count >= 1 && recent[0].Id == record.Id, "最近记录可读回且为最新任务");
-Check(recent[0].Items.Count == 3, "记录明细完整(3 项)");
+Check(recent[0].Items.Count == 4, "记录明细完整(4 项)");
 var all = await store.GetAllAsync();
 Check(all.Count == recent.Count && all[0].Id == record.Id, "全部记录可枚举");
 

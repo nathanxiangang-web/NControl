@@ -12,6 +12,9 @@ namespace NControl.Infrastructure;
 /// </summary>
 public sealed class PowerShellExecutionProvider : IExecutionProvider
 {
+    private static readonly System.Text.RegularExpressions.Regex RegWriteKeyPattern = new(
+        @"Set-ItemProperty\s+-Path\s+'([^']+)'",
+        System.Text.RegularExpressions.RegexOptions.Compiled);
     private readonly ILogger<PowerShellExecutionProvider> _logger;
 
     public PowerShellExecutionProvider(ILogger<PowerShellExecutionProvider> logger) => _logger = logger;
@@ -26,6 +29,11 @@ public sealed class PowerShellExecutionProvider : IExecutionProvider
 
         // 中文系统下 powershell.exe 重定向输出默认 GBK(代码页 936);强制 UTF-8,避免中文乱码
         script = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; " + script;
+
+        // 自动创建目标键:新系统上 HKCU/HKLM 子键可能不存在,Set-ItemProperty 不会自动建键
+        // (New-Item -Force 幂等,键已存在时无副作用)
+        script = RegWriteKeyPattern.Replace(script,
+            m => $"New-Item -Path '{m.Groups[1].Value}' -Force | Out-Null; Set-ItemProperty -Path '{m.Groups[1].Value}'");
 
         var needAdmin = item.RequiresAdmin && !ElevationHelper.IsElevated();
 

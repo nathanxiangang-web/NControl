@@ -86,6 +86,16 @@ var center = new ExecutionCenter(
 var progressEvents = new List<TaskItemProgress>();
 var progress = new Progress<TaskItemProgress>(p => progressEvents.Add(p));
 
+// ============================================================
+// 真机执行模式:dotnet run --project tools/NControl.SmokeTest -- real
+// 需用户已做系统快照;真实执行功能并验证注册表结果(默认模式不执行,保持无副作用)。
+// ============================================================
+if (args.Contains("real"))
+{
+    await RealExecTestAsync(catalog, center, store);
+    return 0;
+}
+
 var probeOk = new FunctionItem
 {
     Id = "smoke.probe-ok",
@@ -245,3 +255,102 @@ Console.WriteLine(failures == 0
     ? "========== 冒烟测试全部通过 =========="
     : $"========== 冒烟测试失败 {failures} 项 ==========");
 return failures == 0 ? 0 : 1;
+
+// ============================================================
+// 真机执行验证(需系统快照):真实执行预设/设置项并核对注册表
+// ============================================================
+async Task RealExecTestAsync(IFunctionCatalog catalog, IExecutionCenter center, ITaskRecordStore store)
+{
+    Console.WriteLine("========== 真机执行验证(real 模式) ==========");
+    Console.WriteLine("警告:将真实修改当前用户注册表,请确保已创建系统快照。");
+    var rf = 0;
+    void RCheck(bool ok, string name, string? detail = null)
+    {
+        if (ok) Console.WriteLine($"[PASS] {name}");
+        else { rf++; Console.WriteLine($"[FAIL] {name}{(detail is null ? "" : $" -> {detail}")}"); }
+    }
+
+    // --- 1. 轻度方案 11 项(全部免管理员) ---
+    var light = catalog.Presets.First(p => p.Id == "preset.light");
+    var items = light.FeatureIds
+        .Select(id => catalog.Find(id))
+        .Where(f => f is not null && !f.RequiresAdmin)
+        .Cast<FunctionItem>()
+        .ToList();
+    Console.WriteLine($"轻度方案: {items.Count} 项待执行");
+    var r1 = await center.ExecuteAsync(new ExecutionRequest(light.Name, items), null, CancellationToken.None);
+    Console.WriteLine($"轻度方案结果: {r1.Result}(成功 {r1.SuccessCount} / 失败 {r1.FailedCount})");
+    var envLimited = new[] { "taskbar.hide-widgets" }; // TaskbarDa 在本测试机受系统策略 ACL 保护,属于环境限制
+    var unexpected = r1.Items.Where(i => i.Status == "失败" && !envLimited.Contains(i.FunctionId)).ToList();
+    RCheck(unexpected.Count == 0, "轻度方案执行成功(环境受限项除外)",
+        string.Join("; ", unexpected.Select(i => $"{i.FunctionName}:{i.Error}")));
+    foreach (var f in r1.Items.Where(i => i.Status == "失败")) Console.WriteLine($"  [环境受限] {f.FunctionName}: {f.Error}");
+
+    // --- 2. 系统设置抽查(免管理员项) ---
+    var picks = new[] { "taskbar.hide-search", "explorer.show-extensions", "privacy.disable-ads-id",
+                        "explorer.notepad-wrap", "taskbar.clock-show-seconds", "start.disable-recommendations" }
+        .Select(id => catalog.Find(id))
+        .Where(f => f is not null && !f.RequiresAdmin)
+        .Cast<FunctionItem>()
+        .ToList();
+    var r2 = await center.ExecuteAsync(new ExecutionRequest($"系统设置抽查({picks.Count} 项)", picks), null, CancellationToken.None);
+    Console.WriteLine($"系统设置抽查结果: {r2.Result}(成功 {r2.SuccessCount} / 失败 {r2.FailedCount})");
+    RCheck(r2.FailedCount == 0, "系统设置抽查全部执行成功");
+
+    // --- 3. 注册表核对 ---
+    using var adv = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced");
+    using var cdm = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager");
+    using var adi = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo");
+    using var ntp = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Notepad");
+
+    RCheck(adv is not null && Convert.ToInt32(adv.GetValue("Start_ShowRecommended", -1)) == 0,
+        "注册表:开始菜单推荐已关闭(Start_ShowRecommended=0)", adv?.GetValue("Start_ShowRecommended")?.ToString());
+    RCheck(adv is not null && Convert.ToInt32(adv.GetValue("HideFileExt", -1)) == 0,
+        "注册表:显示文件扩展名(HideFileExt=0)", adv?.GetValue("HideFileExt")?.ToString());
+    RCheck(adv is not null && Convert.ToInt32(adv.GetValue("ShowSecondsInSystemClock", -1)) == 1,
+        "注册表:时钟显示秒数(ShowSecondsInSystemClock=1)", adv?.GetValue("ShowSecondsInSystemClock")?.ToString());
+    RCheck(adv is not null && Convert.ToInt32(adv.GetValue("SearchboxTaskbarMode", -1)) == 0,
+        "注册表:隐藏任务栏搜索框(SearchboxTaskbarMode=0)", adv?.GetValue("SearchboxTaskbarMode")?.ToString());
+    RCheck(adi is not null && Convert.ToInt32(adi.GetValue("Enabled", -1)) == 0,
+        "注册表:广告 ID 已关闭(AdvertisingInfo/Enabled=0)", adi?.GetValue("Enabled")?.ToString());
+    RCheck(ntp is not null && Convert.ToInt32(ntp.GetValue("fWrap", -1)) == 1,
+        "注册表:记事本自动换行(fWrap=1)", ntp?.GetValue("fWrap")?.ToString());
+
+    // --- 4. 恢复验证(2 项)-> 注册表值应被删除 ---
+    var restores = new[] { "explorer.notepad-wrap", "taskbar.clock-show-seconds" };
+    var restoreItems = restores
+        .Select(id => catalog.Find(id))
+        .Where(f => f is not null)
+        .Select(f => new FunctionItem
+        {
+            Id = f!.Id + ".restore",
+            Name = "恢复:" + f.Name,
+            Category = f.Category,
+            Module = f.Module,
+            Description = "恢复默认值",
+            Risk = RiskLevel.Safe,
+            RequiresAdmin = f.RequiresAdmin,
+            Restart = f.Restart,
+            Source = "测试",
+            Kind = ExecutionKind.PowerShell,
+            Command = RestoreCommandBuilder.Build(f)!
+        })
+        .ToList();
+    var r3 = await center.ExecuteAsync(new ExecutionRequest($"恢复验证({restoreItems.Count} 项)", restoreItems), null, CancellationToken.None);
+    Console.WriteLine($"恢复验证结果: {r3.Result}(成功 {r3.SuccessCount} / 失败 {r3.FailedCount})");
+    RCheck(r3.FailedCount == 0, "恢复任务全部执行成功");
+
+    using var adv2 = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced");
+    using var ntp2 = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Notepad");
+    RCheck(ntp2 is null || ntp2.GetValue("fWrap") is null,
+        "恢复:记事本自动换行值已删除", ntp2?.GetValue("fWrap")?.ToString() ?? "(已删除)");
+    RCheck(adv2 is null || adv2.GetValue("ShowSecondsInSystemClock") is null,
+        "恢复:时钟秒数值已删除", adv2?.GetValue("ShowSecondsInSystemClock")?.ToString() ?? "(已删除)");
+
+    // --- 5. 任务记录持久化核对 ---
+    var recent = await store.GetRecentAsync(6);
+    RCheck(recent.Count >= 3 && recent.Any(r => r.Name.Contains("轻度优化")),
+        "任务记录已写入(含轻度优化任务)", string.Join(", ", recent.Take(3).Select(r => r.Name)));
+
+    Console.WriteLine(rf == 0 ? "========== 真机执行验证全部通过 ==========" : $"========== 真机执行验证失败 {rf} 项 ==========");
+}

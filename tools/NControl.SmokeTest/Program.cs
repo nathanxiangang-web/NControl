@@ -194,6 +194,28 @@ var restorable = catalog.All.Count(f => RestoreCommandBuilder.Build(f) is not nu
 Console.WriteLine($"可恢复功能: {restorable} / {catalog.All.Count}");
 Check(restorable >= catalog.All.Count * 0.6, "目录中可恢复功能占比不低于 60%", $"{restorable}/{catalog.All.Count}");
 
+// ---------- 5. 应用管理页页签命令修复验证 ----------
+// 回归:RelayCommand<int> 收到字符串 CommandParameter 会抛 ArgumentException(曾导致点击页签闪退)
+var appsVm = new NControl.Presentation.ViewModels.AppsViewModel(
+    catalog,
+    new NControl.Presentation.Services.SelectionService(),
+    new IExecutionProvider[] { psProvider, cmdProvider });
+var tabSwitched = false;
+try
+{
+    appsVm.SelectTabCommand.Execute("0");
+    appsVm.SelectTabCommand.Execute("1");
+    appsVm.SelectTabCommand.Execute("2");
+    appsVm.SelectTabCommand.Execute("3");
+    tabSwitched = appsVm.ActiveTab == 3;
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[FAIL] 页签命令抛异常: {ex.Message}");
+}
+Check(tabSwitched, "应用管理页页签切换命令接受字符串参数(闪退修复验证)", $"ActiveTab={appsVm.ActiveTab}");
+Check(appsVm.BloatPreset is not null, "应用管理页预装应用方案卡可用", appsVm.BloatPreset?.CountText);
+
 // 搜索
 Check(catalog.Search("SysMain").Any(f => f.Id == "advanced.disable-sysmain"), "搜索可命中功能");
 Check(catalog.Search("不存在的关键词xyz").Count == 0, "搜索无结果时返回空");

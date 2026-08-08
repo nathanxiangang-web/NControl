@@ -39,9 +39,21 @@ public partial class App : Application
     {
         base.OnStartup(e);
         Trace("OnStartup begin");
+
+        // 全局异常兜底:记录完整异常,避免闪退(产品文档 §5.4 错误与中断)
         DispatcherUnhandledException += (_, args) =>
         {
             Trace($"DispatcherUnhandledException: {args.Exception}");
+            args.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            Trace($"AppDomain UnhandledException: {args.ExceptionObject}");
+        };
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            Trace($"UnobservedTaskException: {args.Exception}");
+            args.SetObserved();
         };
 
         var builder = Host.CreateApplicationBuilder();

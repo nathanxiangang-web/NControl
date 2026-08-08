@@ -44,7 +44,11 @@ public partial class AppsViewModel : ObservableObject
     private bool isScanning;
 
     [RelayCommand]
-    private void SelectTab(int index) => ActiveTab = index;
+    private void SelectTab(string index)
+    {
+        if (int.TryParse(index, out var i) && i is >= 0 and <= 3)
+            ActiveTab = i;
+    }
 
     [RelayCommand]
     private async Task ScanAsync()

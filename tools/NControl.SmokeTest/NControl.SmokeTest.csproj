@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NControl.Core\NControl.Core.csproj" />
     <ProjectReference Include="..\..\src\NControl.Infrastructure\NControl.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\NControl.Presentation\NControl.Presentation.csproj" />
     <ProjectReference Include="..\..\src\NControl.Modules.Optimization\NControl.Modules.Optimization.csproj" />
     <ProjectReference Include="..\..\src\NControl.Modules.Applications\NControl.Modules.Applications.csproj" />
     <ProjectReference Include="..\..\src\NControl.Modules.Cleanup\NControl.Modules.Cleanup.csproj" />

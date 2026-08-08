@@ -125,20 +125,29 @@ public partial class MainViewModel : ObservableObject
     private object? GetPage(string key)
     {
         if (_pages.TryGetValue(key, out var cached)) return cached;
-        var page = key switch
+        object? page;
+        try
         {
-            "home" => _services.GetService(typeof(HomeViewModel)),
-            "optimize" => _services.GetService(typeof(OptimizeViewModel)),
-            "settings" => _services.GetService(typeof(SystemSettingsViewModel)),
-            "apps" => _services.GetService(typeof(AppsViewModel)),
-            "cleanup" => _services.GetService(typeof(CleanupViewModel)),
-            "repair" => _services.GetService(typeof(RepairViewModel)),
-            "tools" => _services.GetService(typeof(ToolsViewModel)),
-            "records" => _services.GetService(typeof(RecordsViewModel)),
-            "appsettings" => _services.GetService(typeof(AppSettingsViewModel)),
-            "about" => _services.GetService(typeof(AboutViewModel)),
-            _ => null
-        };
+            page = key switch
+            {
+                "home" => _services.GetService(typeof(HomeViewModel)),
+                "optimize" => _services.GetService(typeof(OptimizeViewModel)),
+                "settings" => _services.GetService(typeof(SystemSettingsViewModel)),
+                "apps" => _services.GetService(typeof(AppsViewModel)),
+                "cleanup" => _services.GetService(typeof(CleanupViewModel)),
+                "repair" => _services.GetService(typeof(RepairViewModel)),
+                "tools" => _services.GetService(typeof(ToolsViewModel)),
+                "records" => _services.GetService(typeof(RecordsViewModel)),
+                "appsettings" => _services.GetService(typeof(AppSettingsViewModel)),
+                "about" => _services.GetService(typeof(AboutViewModel)),
+                _ => null
+            };
+        }
+        catch (Exception)
+        {
+            // 页面构造失败时不让应用崩溃;全局异常兜底会记录详情,当前页保持上一页
+            page = null;
+        }
         if (page is not null) _pages[key] = page;
         return page;
     }

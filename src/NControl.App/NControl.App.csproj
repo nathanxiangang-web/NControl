@@ -32,9 +32,31 @@
     <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- 安全中心开关工具(SuperUser 提权器 + DEFENDER.CMD + 计划任务模板):随程序分发 -->
+  <!-- 用户提供的离线软件载荷:发布时重命名到 NControl.exe 同级的 Installers 目录。 -->
   <ItemGroup>
-    <None Include="Tools\SecurityCenter\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\StartAllBack-3.9.4.5256-Stbale-Repack.exe"
+          Condition="Exists('..\..\StartAllBack-3.9.4.5256-Stbale-Repack.exe')"
+          Link="Installers\StartAllBack_setup.exe"
+          TargetPath="Installers\StartAllBack_setup.exe"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
+    <None Include="..\..\GeekUninstaller v1.5.1.162.exe"
+          Condition="Exists('..\..\GeekUninstaller v1.5.1.162.exe')"
+          Link="Installers\geek.exe"
+          TargetPath="Installers\geek.exe"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!-- 安全中心/Defender 彻底禁用:SuperUser + DEFENDER.CMD + 计划任务模板 -->
+  <ItemGroup>
+    <None Include="Tools\SecurityCenter\SUPERUSER32.EXE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="Tools\SecurityCenter\SUPERUSER64.EXE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="Tools\SecurityCenter\KILLSECURITYCENTER.CMD" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="Tools\SecurityCenter\DEFENDER.CMD" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="Tools\SecurityCenter\WINDOWS DEFENDER *.XML" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
 </Project>

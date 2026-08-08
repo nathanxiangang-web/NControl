@@ -58,6 +58,9 @@ public partial class ExecutionDialogViewModel : ObservableObject
     private bool hasHighRisk;
 
     [ObservableProperty]
+    private string highRiskWarningText = "本任务包含高风险项目(可能降低安全性、更新能力或稳定性)。确认后仍将执行,请谨慎操作。";
+
+    [ObservableProperty]
     private bool isRunning;
 
     public async Task RunAsync(IReadOnlyList<FunctionItem> items, string taskName, bool showConfirm)
@@ -66,6 +69,9 @@ public partial class ExecutionDialogViewModel : ObservableObject
         _pendingName = taskName;
         Title = taskName;
         HasHighRisk = items.Any(f => f.Risk == RiskLevel.HighRisk);
+        HighRiskWarningText = items.Any(f => f.Id.Equals("advanced.disable-security-center", StringComparison.OrdinalIgnoreCase))
+            ? "将以 TrustedInstaller 权限自动关闭篡改保护,并彻底禁用 Windows 安全中心、Defender、SmartScreen 和部分 AMSI 检查。此操作没有恢复按钮,任务记录也无法回滚;确认前请先创建完整系统镜像。"
+            : "本任务包含高风险项目(可能降低安全性、更新能力或稳定性)。确认后仍将执行,请谨慎操作。";
 
         Rows.Clear();
         foreach (var item in items)
@@ -107,11 +113,22 @@ public partial class ExecutionDialogViewModel : ObservableObject
             SummaryText = $"成功 {record.SuccessCount} 项 · 失败 {record.FailedCount} 项 · 取消 {record.CancelledCount} 项";
             if (record.RequiresRestart)
                 SummaryText += "\n⚠ 部分项目需要重启资源管理器或系统才能完全生效。";
-            // 安全规范:执行了关闭安全防护类功能后,提醒用户安装替代安全软件(如火绒)
-            var securityDisables = _pendingItems.Where(i => IsSecurityDisableItem(i)).Select(i => i.Name).Distinct().ToArray();
+            var succeededIds = record.Items
+                .Where(i => i.Status == "成功")
+                .Select(i => i.FunctionId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (succeededIds.Contains("advanced.disable-security-center"))
+                SummaryText += "\n\n⛔ Windows 安全中心/Defender 已彻底禁用。NControl 不提供恢复或任务回滚;请重启系统完成操作。";
+
+            // 只汇总真正执行成功的防护组件变更;已失败的项目不误报为已关闭。
+            var securityDisables = _pendingItems
+                .Where(i => succeededIds.Contains(i.Id) && IsSecurityDisableItem(i))
+                .Select(i => i.Name)
+                .Distinct()
+                .ToArray();
             if (securityDisables.Length > 0)
                 SummaryText += "\n\n⚠ 已关闭: " + string.Join("、", securityDisables) +
-                    "\n系统将不再主动提醒安全状态。建议安装火绒安全等第三方防护软件,并在安装完成后开启实时防护。";
+                    "\n部分系统防护已降低。如非信任的内网或兼容性场景,请尽快使用“恢复”或任务回滚重新启用。";
             CurrentPhase = DialogPhase.Done;
             TaskCompleted?.Invoke(record);
         }
@@ -159,12 +176,12 @@ public partial class ExecutionDialogViewModel : ObservableObject
     private static bool IsSecurityDisableItem(FunctionItem item)
     {
         var id = item.Id;
-        if (id.StartsWith("advanced.disable-", StringComparison.OrdinalIgnoreCase)) return true;
-        if (id.Contains("firewall", StringComparison.OrdinalIgnoreCase)
-            || id.Contains("security-center", StringComparison.OrdinalIgnoreCase)
-            || id.Contains("smartscreen", StringComparison.OrdinalIgnoreCase))
-            return true;
-        return false;
+        return id.Contains("firewall", StringComparison.OrdinalIgnoreCase)
+               || id.Contains("smartscreen", StringComparison.OrdinalIgnoreCase)
+               || id.Contains("memory-integrity", StringComparison.OrdinalIgnoreCase)
+               || id.Contains("disable-vbs", StringComparison.OrdinalIgnoreCase)
+               || id.Contains("exploit-protection", StringComparison.OrdinalIgnoreCase)
+               || id.Contains("meltdown-mitigations", StringComparison.OrdinalIgnoreCase);
     }
 }
 

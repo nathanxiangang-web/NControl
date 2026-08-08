@@ -7,7 +7,7 @@ namespace NControl.Infrastructure;
 
 /// <summary>
 /// SQLite 任务记录存储。任务记录持久化于 %LocalAppData%\NControl\ncontrol.db。
-/// 单项明细以 JSON 列存储,第一代以简单可靠优先。
+/// 单项明细以 JSON 列存储,保持简单可靠并兼容历史记录。
 /// </summary>
 public sealed class SqliteTaskRecordStore : ITaskRecordStore, IDisposable
 {

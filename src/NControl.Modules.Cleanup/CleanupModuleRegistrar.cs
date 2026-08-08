@@ -61,7 +61,7 @@ public sealed class CleanupModuleRegistrar : IModuleRegistrar
 
     public void RegisterPresets(IFunctionCatalog catalog)
     {
-        // 清理模块第一代不提供批量预设,由页面勾选后统一执行。
+        // 清理模块不提供批量预设,由页面勾选并查看真实扫描结果后统一执行。
     }
 
     private static FunctionItem F(

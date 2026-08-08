@@ -27,7 +27,7 @@
                 <Border Background="{StaticResource DangerSoftBrush}" CornerRadius="12" Padding="14,12" Margin="0,0,0,14"
                         Visibility="{Binding HasHighRisk, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}">
                     <TextBlock Foreground="{StaticResource DangerBrush}" FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap"
-                               Text="本任务包含高风险项目(可能降低安全性、更新能力或稳定性)。确认后仍将执行,请谨慎操作。" />
+                               Text="{Binding HighRiskWarningText}" />
                 </Border>
 
                 <!-- 确认清单 -->

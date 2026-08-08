@@ -3,16 +3,16 @@
 **阶段主题：从“功能可执行”升级为“兼容性可判断、配置可复用、任务可恢复、结果可感知”**
 
 > [!IMPORTANT]
-> 本文应与 `NControl_第一代产品开发文档_v0.2.md`、`ncontrol_static_prototype.html`、当前完整源码、当前任务清单与测试脚本一同提供给开发 AI。
+> 本文应与当前完整源码、`README.md`、`PROJECT_TASKS.md` 与测试脚本一同维护，作为 NControl 第二代的产品与工程基线。
 >
 > 第一代已经完成。第二代必须建立在现有代码和现有业务底座之上，禁止重新搭建项目、重写已验证功能或擅自更换技术栈。
 
 | 项目 | 内容 |
 | --- | --- |
 | 产品 | NControl |
-| 文档版本 | 第二代 v0.1 |
+| 文档版本 | 第二代 v2.0.0 |
 | 编制日期 | 2026-08-08 |
-| 开发阶段 | 第二代 |
+| 开发阶段 | 第二代正式版 |
 | 核心目标 | 兼容性、配置复用、批次恢复、扫描统计 |
 
 # 0. 执行摘要
@@ -547,7 +547,7 @@ FunctionId 匹配
 先读取：
 
 - 当前解决方案
-- 第一代开发文档
+- 当前 README 与第二代开发文档
 - 当前任务清单
 - 功能目录
 - FunctionId
@@ -559,7 +559,7 @@ FunctionId 匹配
 
 创建：
 
-`PROJECT_TASKS_GEN2.md`
+`PROJECT_TASKS.md`
 
 禁止重新创建解决方案。
 
@@ -637,7 +637,7 @@ FunctionId 匹配
 
 开发 AI 必须：
 
-1. 创建并维护 `PROJECT_TASKS_GEN2.md`
+1. 创建并维护 `PROJECT_TASKS.md`
 2. 每完成一项更新状态
 3. build
 4. test
@@ -755,12 +755,11 @@ Windows 配置管理中心
 第一代已经完成，不得重新创建解决方案，不得重写已验证功能。
 
 先完整阅读：
-1. NControl 第一代产品开发文档；
-2. NControl 第二代开发文档；
-3. 当前项目源码；
-4. 当前测试与任务记录。
+1. NControl 第二代开发文档；
+2. README 与当前项目源码；
+3. 当前测试与任务记录。
 
-首先审计当前代码状态并创建 PROJECT_TASKS_GEN2.md。
+首先审计当前代码状态并更新 PROJECT_TASKS.md。
 
 然后持续开发：
 
@@ -774,8 +773,6 @@ Windows 配置管理中心
 C# / .NET 10 / WPF / XAML / MVVM /
 CommunityToolkit.Mvvm / Host + DI + Logging /
 JSON / SQLite。
-
-HTML 原型只作为视觉参考，不是 Web 项目。
 
 不要因为完成单个类、单个页面或单项功能就停止。
 每完成一项自动更新任务清单、build、test，然后继续下一项。

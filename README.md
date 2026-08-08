@@ -1,8 +1,8 @@
 # NControl · Windows 控制中心
 
-Windows 优化与系统管理工具（WPF / .NET 10）。第一代已完成：统一功能目录 + 执行中心 + 任务记录 + 状态检测，功能覆盖优化、应用、清理、修复、工具五大模块。
+Windows 优化与系统管理工具（WPF / .NET 10）。NControl v2.0.0 已完成兼容性判断、配置复用、批次回滚、清理扫描与高风险操作治理，功能覆盖优化、应用、清理、修复、工具五大模块。
 
-> 定位：**功能型测试版本**（产品文档《NControl_第一代产品开发文档_v0.2.md》）。强调统一入口和常用能力，不宣称覆盖所有电脑/系统版本，不保证所有优化都能提升性能。
+> 定位：**第二代正式版**（开发基线见《NControl_第二代开发文档.md》）。强调真实状态、兼容性、可复用与可解释；不宣称覆盖所有电脑/系统版本，不保证所有优化都能提升性能。
 
 ---
 
@@ -15,7 +15,7 @@ dotnet build NControl.slnx -c Debug
 # 运行(App 默认以管理员身份运行)
 dotnet run --project src/NControl.App
 
-# 冒烟测试(225 项断言,无需管理员)
+# 冒烟测试(无需管理员)
 dotnet run --project tools/NControl.SmokeTest
 
 # 功能统计(运行时权威数据:目录/分类/风险/预设引用)
@@ -25,7 +25,11 @@ dotnet run --project tools/NControl.FeatureStats
 dotnet run --project tools/NControl.FunctionTest
 ```
 
-环境要求：.NET 10 SDK、Windows 10/11（中文系统）。PowerShell 5.1（内置，provider 固定绝对路径调用）。
+开发环境要求：.NET 10 SDK、Windows 10/11（中文系统）。PowerShell 5.1（内置，provider 固定绝对路径调用）。
+
+发布版使用 `win-x64` 自包含单文件模式时，.NET 10/WPF 运行时嵌入 `NControl.exe`，目标电脑不需要另装 .NET 10 Desktop Runtime。运行 `tools/Publish-SelfContained.ps1 -AppVersion 2.0.0` 会在 `outputs` 下生成规范命名的精简文件夹、ZIP 和 SHA-256 校验文件；脚本会阻止 `.pdb`、源码、测试、日志和构建缓存混入交付包。
+
+软件安装页会优先读取 `%LocalAppData%\NControl\installers` 中的同名覆盖文件，未提供覆盖文件时读取 `NControl.exe` 同级的 `Installers` 目录。这里使用 `AppContext.BaseDirectory` 定位，不依赖客户的用户名、解压盘符或快捷方式工作目录。离线安装载荷仅进入 Release 包，不直接提交到源码仓库；本地打包前需在项目根目录提供脚本中列出的两个安装器。
 
 ---
 
@@ -108,8 +112,8 @@ IModuleRegistrar.RegisterFeatures() → IFunctionCatalog(全局功能目录)
 
 ## 文档
 
-- `PROJECT_TASKS.md` — 开发任务清单与轮次记录（第一~十三轮）
-- `NControl_第一代产品开发文档_v0.2.md` — 产品文档（完成定义 §9.3、迭代路线 §10、验收标准 §12）
+- `PROJECT_TASKS.md` — 第二代开发、验证与发布任务清单
+- `NControl_第二代开发文档.md` — 第二代产品目标、技术边界与验收口径
 - `src/NControl.Core/Sources.cs` — 开源来源台账（ZyperWin++ 4.2 等）
 
 ## 开发约定
@@ -117,10 +121,10 @@ IModuleRegistrar.RegisterFeatures() → IFunctionCatalog(全局功能目录)
 - 中文回复/注释/UI 文案。
 - 提交粒度：一轮功能一个提交，commit message 说明改动+验证结果。
 - 改 UI 后跑 `NControl.StartupVerify.ps1` 确认渲染；改目录/预设后跑 `NControl.FeatureStats` + `NControl.SmokeTest`。
-- 不要删除来源、许可证和功能说明信息；不要自行增加一级导航或改变模块名称（文档 §11.2）。
+- 不要删除来源、许可证和功能说明信息；不要未经评审增加一级导航或改变模块名称。
 
-## 第二代规划（文档 §10）
+## 后续规划
 
 状态感知（兼容性提示）→ 恢复与配置（批次回滚/配置导入导出）→ 更新治理 → 专业能力。所有能力围绕现有底座生长，不改变产品结构。
 
-> ✅ 第二代已完成：兼容性判断、配置保存/导入/导出、批次回滚、清理扫描与空间统计（见 PROJECT_TASKS_GEN2.md）
+> ✅ v2.0.0 已完成：兼容性判断、配置保存/导入/导出、批次回滚、清理扫描、空间统计与规范化自包含发布（见 `PROJECT_TASKS.md`）。

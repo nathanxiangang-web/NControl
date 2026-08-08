@@ -4,7 +4,7 @@ namespace NControl.Modules.Applications;
 
 /// <summary>
 /// 应用模块:预装应用、已安装软件、Windows 组件和软件入口(产品文档 §3.3)。
-/// 第一代覆盖预装应用(Appx);默认不选择 Microsoft Store、关键运行库和系统依赖。
+/// 应用模块覆盖预装应用(Appx);默认不选择 Microsoft Store、关键运行库和系统依赖。
 /// </summary>
 public sealed class ApplicationsModuleRegistrar : IModuleRegistrar
 {

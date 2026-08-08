@@ -1,8 +1,14 @@
 # ---------- 构建产物 ----------
 bin/
 obj/
+work/
+outputs/
 *.user
 .vs/
+
+# 本地第三方离线安装载荷仅进入 Release 附件,不直接提交到源码仓库
+/StartAllBack-3.9.4.5256-Stbale-Repack.exe
+/GeekUninstaller v1.5.1.162.exe
 *.db
 *.db-shm
 *.db-wal

@@ -66,6 +66,20 @@ foreach (var preset in catalog.Presets)
 }
 Check(presetHighRisk.Count == 0, "任何预设都不包含高风险功能", presetHighRisk.Count == 0 ? null : string.Join(",", presetHighRisk));
 
+// 安全中心/Defender:彻底禁用、不提供恢复;必须禁入预设且不可被真机测试自动执行。
+var stopSecurityCenter = catalog.Find("advanced.disable-security-center");
+Check(stopSecurityCenter is not null, "安全中心/Defender:彻底禁用功能已注册");
+Check(stopSecurityCenter?.Risk == RiskLevel.HighRisk, "安全中心/Defender:标记为高风险");
+Check(stopSecurityCenter?.Command?.Contains("KILLSECURITYCENTER.CMD", StringComparison.OrdinalIgnoreCase) == true
+      && stopSecurityCenter.Command.Contains("TamperProtection", StringComparison.OrdinalIgnoreCase),
+    "安全中心/Defender:使用 SuperUser 全量禁用脚本并验证篡改保护", stopSecurityCenter?.Command);
+Check(stopSecurityCenter?.Command?.Contains("-EncodedCommand", StringComparison.OrdinalIgnoreCase) == true
+      && stopSecurityCenter.Command.Contains("$trustedInstallerCommand", StringComparison.Ordinal),
+    "安全中心/Defender:SuperUser 接收无尾引号污染的 EncodedCommand", stopSecurityCenter?.Command);
+var restoreSecurityCenter = stopSecurityCenter is null ? null : RestoreCommandBuilder.Build(stopSecurityCenter);
+Check(restoreSecurityCenter is null,
+    "安全中心/Defender:按要求不提供恢复/回滚", restoreSecurityCenter);
+
 // 方案引用不重复注册
 Check(catalog.All.Select(f => f.Id).Distinct().Count() == catalog.All.Count, "功能 Id 无重复");
 
@@ -108,7 +122,7 @@ var probeOk = new FunctionItem
     Restart = RestartRequirement.None,
     Source = "测试",
     Kind = ExecutionKind.PowerShell,
-    Command = "Write-Output 'smoke-ok'; Write-Output ('2+3=' + (2+3)); exit 0"
+    Command = "Write-Output 'smoke-ok'; Write-Output ('2+3=' + (2+3)); Write-Output ('base=' + $env:NCONTROL_APP_BASE); exit 0"
 };
 var probeFail = new FunctionItem
 {
@@ -162,6 +176,8 @@ Console.WriteLine($"任务结果: {record.Result} (成功 {record.SuccessCount} 
 Check(record.SuccessCount == 3 && record.FailedCount == 1, "执行结果:3 成功 + 1 失败");
 Check(record.Result == "部分失败", "任务汇总为“部分失败”");
 Check(record.Items[0].Output?.Contains("smoke-ok") == true, "成功项输出包含 smoke-ok", record.Items[0].Output);
+Check(record.Items[0].Output?.Contains("base=" + AppContext.BaseDirectory, StringComparison.OrdinalIgnoreCase) == true,
+    "PowerShell 子进程获得 NControl 真实程序目录", record.Items[0].Output);
 Check(record.Items[1].Status == "失败" && !string.IsNullOrWhiteSpace(record.Items[1].Error), "失败项记录了错误信息", record.Items[1].Error);
 Check(record.Items[2].Output?.Contains("cmd-ok") == true, "命令执行项输出包含 cmd-ok", record.Items[2].Output);
 Check(record.Items[3].Output?.Contains("中文测试:你好世界") == true, "PowerShell 中文输出无乱码(GBK->UTF8 修复)", record.Items[3].Output);
@@ -444,7 +460,7 @@ Check(sab is not null && sab.Kind == NControl.Presentation.ViewModels.InstallKin
 var appsModule = catalog.ByModule(ModuleKind.Applications).ToArray();
 Check(appsModule.Length == 10, "应用模块功能项数量=10(预装应用)", appsModule.Length.ToString());
 Check(appsModule.All(f => f.Category == "预装应用"), "应用模块全部为预装应用分类", string.Join(",", appsModule.Select(f => f.Category).Distinct()));
-Check(appsModule.All(f => f.Command.Contains("Remove-AppxPackage -AllUsers", StringComparison.OrdinalIgnoreCase)),
+Check(appsModule.All(f => f.Command?.Contains("Remove-AppxPackage -AllUsers", StringComparison.OrdinalIgnoreCase) == true),
     "应用模块全部命令含 -AllUsers(彻底卸载)", string.Join(",", appsModule.Select(f => f.Id)));
 Check(appsModule.All(f => f.RestoreCommand is null || f.RestoreCommand.Length == 0),
     "应用模块不提供恢复命令(卸载后需从商店重新安装,如实标注)", "");

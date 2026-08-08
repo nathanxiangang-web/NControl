@@ -9,6 +9,19 @@ using NControl.Core;
 using NControl.Infrastructure;
 using NControl.Modules.Optimization;
 
+if (args.Contains("--security-center-preflight") || args.Contains("--execute-security-center"))
+{
+    var execute = args.Contains("--execute-security-center");
+    if (execute && !args.Contains("--confirm-irrevocable"))
+    {
+        Console.Error.WriteLine("拒绝执行:缺少 --confirm-irrevocable 双重确认参数。");
+        Environment.ExitCode = 64;
+        return;
+    }
+
+    Environment.ExitCode = await SecurityCenterProbeAsync(execute);
+    return;
+}
 
 if (args.Contains("--recheck"))
 {
@@ -126,6 +139,7 @@ var highRiskIds = new HashSet<string>
     "advanced.secure-uia-paths", "advanced.uia-nonsecure-desktop",
     "advanced.disable-smartscreen", "advanced.disable-open-security-warning",
     "advanced.disable-firewall", "advanced.disable-memory-integrity", "advanced.disable-vbs",
+    "advanced.disable-security-center",
     "advanced.disable-system-restore", "advanced.disable-windows-update-checks",
     "advanced.disable-tsx", "advanced.disable-insecure-download-warnings",
     "advanced.disable-meltdown-mitigations", "perf.disable-exploit-protection",
@@ -157,9 +171,11 @@ foreach (var item in items)
         if (highRiskIds.Contains(item.Id))
         {
             var restore = RestoreCommandBuilder.Build(item);
-            var ok = !string.IsNullOrWhiteSpace(item.Command) && !string.IsNullOrWhiteSpace(restore);
-            if (ok) { pass++; log($"[PASS] {tag} (高风险:仅验证命令+恢复命令可生成)"); }
-            else { fail++; failures.Add($"{tag}: 高风险项命令或恢复命令缺失"); log($"[FAIL] {tag}"); }
+            var intentionallyIrreversible = item.Id == "advanced.disable-security-center";
+            var ok = !string.IsNullOrWhiteSpace(item.Command)
+                     && (intentionallyIrreversible ? string.IsNullOrWhiteSpace(restore) : !string.IsNullOrWhiteSpace(restore));
+            if (ok) { pass++; log($"[PASS] {tag} (高风险:只做静态验证{(intentionallyIrreversible ? ",已标记不可恢复" : "+恢复命令")})"); }
+            else { fail++; failures.Add($"{tag}: 高风险项命令/恢复策略与预期不符"); log($"[FAIL] {tag}"); }
             continue;
         }
 
@@ -440,6 +456,86 @@ static async Task DiagAsync()
         log("");
     }
     sw.Close();
+}
+
+// ---------- 安全中心专用调试入口:默认只读,破坏性执行需要双重参数 ----------
+static async Task<int> SecurityCenterProbeAsync(bool execute)
+{
+    var fileName = execute ? "security_center_execute.txt" : "security_center_preflight.txt";
+    using var sw = new StreamWriter(Path.Combine(AppContext.BaseDirectory, fileName), append: false, new UTF8Encoding(true));
+    var log = new Action<string>(s => { Console.WriteLine(s); sw.WriteLine(s); sw.Flush(); });
+    var catalog = new FunctionCatalog(NullLogger<FunctionCatalog>.Instance);
+    new OptimizationModuleRegistrar().RegisterFeatures(catalog);
+    var item = catalog.Find("advanced.disable-security-center");
+    if (item is null)
+    {
+        log("FAIL: 功能 advanced.disable-security-center 未注册。");
+        return 2;
+    }
+
+    var isAdmin = new System.Security.Principal.WindowsPrincipal(
+        System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(
+        System.Security.Principal.WindowsBuiltInRole.Administrator);
+    log($"Mode={(execute ? "EXECUTE" : "PREFLIGHT")}");
+    log($"BaseDirectory={AppContext.BaseDirectory}");
+    log($"IsAdmin={isAdmin}");
+    log($"Feature={item.Id}|Risk={item.Risk}|Restart={item.Restart}|HasRestore={!string.IsNullOrWhiteSpace(item.RestoreCommand)}");
+
+    var payloadRoot = Path.Combine(AppContext.BaseDirectory, "Tools", "SecurityCenter");
+    var required = new[]
+    {
+        "SuperUser32.exe", "SuperUser64.exe", "KILLSECURITYCENTER.CMD", "DEFENDER.CMD",
+        "WINDOWS DEFENDER CACHE MAINTENANCE.XML", "WINDOWS DEFENDER CLEANUP.XML",
+        "WINDOWS DEFENDER SCHEDULED SCAN.XML", "WINDOWS DEFENDER VERIFICATION.XML"
+    };
+    foreach (var name in required)
+    {
+        var path = Path.Combine(payloadRoot, name);
+        log($"Payload={name}|Exists={File.Exists(path)}" +
+            (File.Exists(path) ? $"|SHA256={Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)))}" : ""));
+    }
+
+    var provider = new PowerShellExecutionProvider(NullLogger<PowerShellExecutionProvider>.Instance);
+    var stateProbe = new FunctionItem
+    {
+        Id = "security-center.state-probe", Name = "安全中心状态探针", Category = "测试", Module = ModuleKind.Tools,
+        Description = "只读检查服务、驱动和篡改保护状态。", Risk = RiskLevel.Safe, RequiresAdmin = false,
+        Restart = RestartRequirement.None, Source = "测试", Kind = ExecutionKind.PowerShell,
+        Command = "Write-Output ('NCONTROL_APP_BASE=' + $env:NCONTROL_APP_BASE); " +
+                  "$names=@('WinDefend','wscsvc','WdNisSvc','SecurityHealthService','WdFilter','WdBoot','wdnisdrv'); " +
+                  "foreach($n in $names){$svc=Get-Service -Name $n -ErrorAction SilentlyContinue; " +
+                  "$start=(Get-ItemProperty -LiteralPath ('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\'+$n) -Name Start -ErrorAction SilentlyContinue).Start; " +
+                  "Write-Output ($n+'|Status='+$(if($svc){$svc.Status}else{'Missing'})+'|Start='+$start)}; " +
+                  "$tamper=(Get-ItemProperty -LiteralPath 'HKLM:\\SOFTWARE\\Microsoft\\Windows Defender\\Features' -Name TamperProtection -ErrorAction SilentlyContinue).TamperProtection; " +
+                  "Write-Output ('TamperProtectionRegistry='+$tamper); " +
+                  "try{$mp=Get-MpComputerStatus -ErrorAction Stop; Write-Output ('IsTamperProtected='+$mp.IsTamperProtected); Write-Output ('AntivirusEnabled='+$mp.AntivirusEnabled); Write-Output ('RealTimeProtectionEnabled='+$mp.RealTimeProtectionEnabled)}catch{Write-Output ('GetMpStatusError='+$_.Exception.Message)}; exit 0"
+    };
+
+    var before = await provider.ExecuteAsync(stateProbe, line => log("STATE> " + line), CancellationToken.None);
+    log($"PreflightSuccess={before.Success}|Exit={before.ExitCode}|Error={before.Error}");
+    if (!before.Success || before.Output?.Contains("NCONTROL_APP_BASE=" + AppContext.BaseDirectory, StringComparison.OrdinalIgnoreCase) != true)
+    {
+        log("FAIL: 只读前置检查失败,或子 PowerShell 未获得真实程序目录。");
+        return 3;
+    }
+
+    if (!execute)
+    {
+        log("PASS: 只读前置检查完成,未修改系统。");
+        return 0;
+    }
+
+    if (!isAdmin)
+    {
+        log("FAIL: 破坏性执行需要管理员权限。");
+        return 5;
+    }
+
+    log("EXECUTE: 开始调用产品中的不可恢复功能。");
+    var result = await provider.ExecuteAsync(item, line => log("RUN> " + line), CancellationToken.None);
+    log($"ExecuteSuccess={result.Success}|Exit={result.ExitCode}|Error={result.Error}");
+    if (!string.IsNullOrWhiteSpace(result.Output)) log("Output=" + result.Output.Trim());
+    return result.Success ? 0 : 10;
 }
 
 
